@@ -1,0 +1,22 @@
+[package]
+name = "luomu-libpcap"
+version = "0.1.0"
+authors = [ "Ossi Herrala <oherrala@iki.fi>" ]
+edition = "2018"
+license = "MIT"
+
+description = "Rusty libpcap bindings"
+homepage = "https://github.com/sensorfu/luomu-libpcap#readme"
+repository = "https://github.com/sensorfu/luomu-libpcap"
+documentation = "https://docs.rs/luomu-libpcap/"
+readme = "README.md"
+keywords = [ "pcap", "libpcap", "network" ]
+categories = [ "api-bindings", "network-programming" ]
+
+[dependencies]
+libc = { version = "0.2", default-features = false }
+log = { version = "0.4", default-features = false }
+luomu-libpcap-sys = { path = "../luomu-libpcap-sys" }
+
+[dev-dependencies]
+env_logger = {version = "0.6", default-features = false }
