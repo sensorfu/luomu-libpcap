@@ -1,0 +1,23 @@
+version: 2.1
+jobs:
+  build:
+    docker:
+      - image: rust:1.35.0
+    steps:
+      - checkout
+      - run:
+          name: install_deps
+          command: |
+            apt -y update
+            apt -y install bison flex
+      - run:
+          name: install_rust_toolchains
+          command: |
+            rustup update
+            rustup component add clippy-preview
+            rustup install beta
+            rustup install nightly
+      - run: cargo test
+      - run: cargo clippy
+      - run: cargo +beta test
+      - run: cargo +nightly test
