@@ -1,5 +1,7 @@
 use std::collections::{BTreeSet, HashSet};
-use std::net::IpAddr;
+use std::convert::TryFrom;
+use std::fmt;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::ops::Deref;
 use std::rc::Rc;
 use std::result;
@@ -40,6 +42,15 @@ pub struct Pcap {
 }
 
 impl Pcap {
+    pub fn new(source: &str) -> Result<Pcap> {
+        let pcap_t = pcap_create(source)?;
+        let pcap_filter = None;
+        Ok(Pcap {
+            pcap_t,
+            pcap_filter,
+        })
+    }
+
     pub fn builder(source: &str) -> Result<PcapBuilder> {
         let pcap_t = pcap_create(source)?;
         let pcap_filter = None;
@@ -159,7 +170,11 @@ pub enum Packet<'p> {
 }
 
 impl<'p> Packet<'p> {
-    fn to_vec(&self) -> Vec<u8> {
+    pub fn from_slice(buf: &'p [u8]) -> Packet<'p> {
+        Packet::Borrowed(Rc::new(buf))
+    }
+
+    pub fn to_vec(&self) -> Vec<u8> {
         match self {
             Packet::Borrowed(packet) => packet.to_vec(),
             Packet::Owned(packet) => packet.clone(),
@@ -172,6 +187,12 @@ impl<'p> ToOwned for Packet<'p> {
 
     fn to_owned(&self) -> Self {
         Packet::Owned(self.to_vec())
+    }
+}
+
+impl<'p> AsRef<[u8]> for Packet<'p> {
+    fn as_ref(&self) -> &[u8] {
+        self.deref()
     }
 }
 
@@ -204,6 +225,15 @@ impl PcapIfT {
 
     pub fn get_interfaces(&self) -> HashSet<Interface> {
         self.iter().collect()
+    }
+
+    pub fn find_interface_with_name(&self, name: &str) -> Option<Interface> {
+        for interface in self.get_interfaces() {
+            if interface.has_name(name) {
+                return Some(interface)
+            }
+        }
+        None
     }
 
     pub fn find_interface_with_ip(&self, ip: &IpAddr) -> Option<String> {
@@ -243,12 +273,25 @@ impl Interface {
         self.flags.get(&InterfaceFlag::Loopback).is_some()
     }
 
-    pub fn get_addresses(&self) -> HashSet<IpAddr> {
-        self.addresses.iter().map(|i| i.addr).collect()
+    pub fn has_name(&self, name: &str) -> bool {
+        self.name == name
+    }
+
+    pub fn get_ether_address(&self) -> Option<MacAddr> {
+        for ia in &self.addresses {
+            if let Address::Mac(addr) = ia.addr {
+                return Some(addr);
+            }
+        }
+        None
+    }
+
+    pub fn get_ip_addresses(&self) -> HashSet<IpAddr> {
+        self.addresses.iter().filter_map(|i| IpAddr::try_from(&i.addr).ok()).collect()
     }
 
     pub fn has_address(&self, ip: &IpAddr) -> bool {
-        self.get_addresses().get(ip).is_some()
+        self.get_ip_addresses().get(ip).is_some()
     }
 }
 
@@ -293,11 +336,144 @@ impl Iterator for InterfaceIter {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum Address {
+    Ipv4(Ipv4Addr),
+    Ipv6(Ipv6Addr),
+    Mac(MacAddr),
+}
+
+impl Address {
+    pub fn is_ipv4(&self) -> bool {
+        match self {
+            Address::Ipv4(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_ipv6(&self) -> bool {
+        match self {
+            Address::Ipv6(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_ip(&self) -> bool {
+        self.is_ipv4() || self.is_ipv6()
+    }
+}
+
+impl From<Ipv4Addr> for Address {
+    fn from(ip: Ipv4Addr) -> Self {
+        Address::Ipv4(ip)
+    }
+}
+
+impl From<Ipv6Addr> for Address {
+    fn from(ip: Ipv6Addr) -> Self {
+        Address::Ipv6(ip)
+    }
+}
+
+impl From<IpAddr> for Address {
+    fn from(ip: IpAddr) -> Self {
+        match ip {
+            IpAddr::V4(ip) => Address::Ipv4(ip),
+            IpAddr::V6(ip) => Address::Ipv6(ip),
+        }
+    }
+}
+
+impl From<[u8; 6]> for Address {
+    fn from(mac: [u8; 6]) -> Self {
+        Address::Mac(MacAddr(mac))
+    }
+}
+
+impl TryFrom<Address> for Ipv4Addr {
+    type Error = Error;
+
+    fn try_from(addr: Address) -> result::Result<Self, Self::Error> {
+        match addr {
+            Address::Ipv4(ip) => Ok(ip),
+            _ => Err(Error::InvalidAddress),
+        }
+    }
+}
+
+impl TryFrom<Address> for Ipv6Addr {
+    type Error = Error;
+
+    fn try_from(addr: Address) -> result::Result<Self, Self::Error> {
+        match addr {
+            Address::Ipv6(ip) => Ok(ip),
+            _ => Err(Error::InvalidAddress),
+        }
+    }
+}
+
+impl TryFrom<Address> for IpAddr {
+    type Error = Error;
+
+    fn try_from(addr: Address) -> result::Result<Self, Self::Error> {
+        match addr {
+            Address::Ipv4(ip) => Ok(ip.into()),
+            Address::Ipv6(ip) => Ok(ip.into()),
+            _ => Err(Error::InvalidAddress),
+        }
+    }
+}
+
+impl TryFrom<&Address> for Ipv4Addr {
+    type Error = Error;
+
+    fn try_from(addr: &Address) -> result::Result<Self, Self::Error> {
+        match addr {
+            Address::Ipv4(ip) => Ok(*ip),
+            _ => Err(Error::InvalidAddress),
+        }
+    }
+}
+
+impl TryFrom<&Address> for Ipv6Addr {
+    type Error = Error;
+
+    fn try_from(addr: &Address) -> result::Result<Self, Self::Error> {
+        match addr {
+            Address::Ipv6(ip) => Ok(*ip),
+            _ => Err(Error::InvalidAddress),
+        }
+    }
+}
+
+impl TryFrom<&Address> for IpAddr {
+    type Error = Error;
+
+    fn try_from(addr: &Address) -> result::Result<Self, Self::Error> {
+        match addr {
+            Address::Ipv4(ip) => Ok((*ip).into()),
+            Address::Ipv6(ip) => Ok((*ip).into()),
+            _ => Err(Error::InvalidAddress),
+        }
+    }
+}
+
+impl TryFrom<Address> for MacAddr {
+    type Error = Error;
+
+    fn try_from(addr: Address) -> result::Result<Self, Self::Error> {
+        match addr {
+            Address::Mac(mac) => Ok(mac),
+            _ => Err(Error::InvalidAddress),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct InterfaceAddress {
-    addr: IpAddr,
-    netmask: Option<IpAddr>,
-    broadaddr: Option<IpAddr>,
-    dstaddr: Option<IpAddr>,
+    addr: Address,
+    netmask: Option<Address>,
+    broadaddr: Option<Address>,
+    dstaddr: Option<Address>,
 }
 
 pub struct AddressIter {
@@ -348,4 +524,38 @@ pub enum InterfaceFlag {
     Up,
     /// set if the interface is running
     Running,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct MacAddr([u8; 6]);
+
+impl fmt::Debug for MacAddr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let h = self.0.iter().map(|b| format!("{:02x}", b)).collect::<Vec<_>>().join(":");
+        f.write_str(&h)
+    }
+}
+
+impl std::ops::Deref for MacAddr {
+    type Target = [u8; 6];
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Packet;
+
+    #[test]
+    fn test_packet_to_owned() {
+        let buf = vec![1,2,3,4];
+        let packet = Packet::from_slice(&buf);
+        let owned = packet.to_owned();
+        if let Packet::Owned(p) = owned {
+            assert_eq!(p, buf);
+        } else {
+            panic!("Packet was not owned");
+        }
+    }
 }

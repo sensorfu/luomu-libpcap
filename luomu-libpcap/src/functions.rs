@@ -1,4 +1,5 @@
 use std::collections::BTreeSet;
+use std::convert::{TryFrom, TryInto};
 use std::ffi::{c_void, CStr, CString};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::rc::Rc;
@@ -6,6 +7,7 @@ use std::rc::Rc;
 use log::trace;
 
 use luomu_libpcap_sys as libpcap;
+use crate::Address;
 
 use super::{
     AddressIter, Error, Interface, InterfaceAddress, InterfaceFlag, Packet, PcapFilter, PcapIfT,
@@ -241,7 +243,7 @@ pub(crate) fn try_interface_from(pcap_if_t: *mut libpcap::pcap_if_t) -> Result<I
     })
 }
 
-fn from_sockaddr(addr: *const libc::sockaddr) -> Option<IpAddr> {
+fn from_sockaddr(addr: *const libc::sockaddr) -> Option<Address> {
     trace!("from_sockaddr({:p})", addr);
     if addr.is_null() {
         return None;
@@ -261,7 +263,17 @@ fn from_sockaddr(addr: *const libc::sockaddr) -> Option<IpAddr> {
         #[cfg(target_os = "macos")]
         libc::AF_LINK => {
             // Link local address aka interface MAC/Ethernet address
-            None
+            let dl_sock: *const libc::sockaddr_dl = addr as *const libc::sockaddr_dl;
+            let start = unsafe { (*dl_sock).sdl_nlen } as usize;
+            let dl_addr: [u8; 6] = unsafe {[
+                *(*dl_sock).sdl_data.get(start+0)? as u8,
+                *(*dl_sock).sdl_data.get(start+1)? as u8,
+                *(*dl_sock).sdl_data.get(start+2)? as u8,
+                *(*dl_sock).sdl_data.get(start+3)? as u8,
+                *(*dl_sock).sdl_data.get(start+4)? as u8,
+                *(*dl_sock).sdl_data.get(start+5)? as u8,
+            ]};
+            Some(dl_addr.into())
         }
         n => {
             log::error!("Unsupported sa_family {}", n);
@@ -273,7 +285,7 @@ fn from_sockaddr(addr: *const libc::sockaddr) -> Option<IpAddr> {
 pub(crate) fn try_address_from(pcap_addr_t: *mut libpcap::pcap_addr_t) -> Option<InterfaceAddress> {
     trace!("try_address_from({:p})", pcap_addr_t);
     debug_assert!(!pcap_addr_t.is_null(), "null pointer");
-    let addr: IpAddr = {
+    let addr = {
         let addr: *const libc::sockaddr = unsafe { (*pcap_addr_t).addr };
         from_sockaddr(addr)?
     };

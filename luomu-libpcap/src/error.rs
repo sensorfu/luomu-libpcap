@@ -5,6 +5,8 @@ use std::fmt;
 pub enum Error {
     /// Capture handle already activated
     AlreadyActivated,
+    /// Invalid address
+    InvalidAddress,
     /// Timeout happened (maybe during live capture)
     Timeout,
     /// No more packets available
@@ -23,6 +25,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::AlreadyActivated => write!(f, "libpcap capture handler already activated"),
+            Error::InvalidAddress => write!(f, "invalid address"),
             Error::Timeout => write!(f, "timeout"),
             Error::NoMorePackets => write!(f, "no more packets available"),
             Error::CStringError(err) => err.fmt(f),
