@@ -156,7 +156,19 @@ impl<'p> Iterator for PcapIter<'p> {
     type Item = Packet<'p>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        pcap_next_ex(&self.pcap_t).ok()
+        loop {
+            match pcap_next_ex(&self.pcap_t) {
+                Ok(p) => return Some(p),
+                Err(e) => match e {
+                    // pcap_next_ex() sometimes seems to return
+                    // "packet buffer expired" (whatever that means),
+                    // even if the immediate mode is set. Just retry in
+                    // this case.
+                    Error::Timeout => continue,
+                    _ => return None
+                }
+            }
+        }
     }
 }
 
