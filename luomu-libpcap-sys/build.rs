@@ -55,7 +55,7 @@ fn compile(out_dir: &str, source_dir: &Path) -> io::Result<()> {
     let cc = compiler.path().to_string_lossy();
     // panic!("cc = {}", cc);
 
-    let output = Command::new("./configure")
+    let output = Command::new(source_dir.join("configure"))
         .current_dir(&source_dir)
         .arg(format!("CC={}", cc))
         .arg("--prefix")
