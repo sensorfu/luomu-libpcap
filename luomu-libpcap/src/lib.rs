@@ -541,6 +541,12 @@ pub enum InterfaceFlag {
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MacAddr([u8; 6]);
 
+impl From<[u8; 6]> for MacAddr {
+    fn from(val: [u8; 6]) -> Self {
+        Self(val)
+    }
+}
+
 impl fmt::Debug for MacAddr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let h = self.0.iter().map(|b| format!("{:02x}", b)).collect::<Vec<_>>().join(":");
