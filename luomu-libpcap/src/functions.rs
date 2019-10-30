@@ -94,10 +94,11 @@ pub fn get_error(pcap_t: &PcapT) -> Result<Error> {
 }
 
 pub fn pcap_inject(pcap_t: &PcapT, buf: &[u8]) -> Result<usize> {
-    trace!("pcap_inject({:p})", pcap_t.pcap_t);
-    let ret =
-        unsafe { libpcap::pcap_inject(pcap_t.pcap_t, buf.as_ptr() as *const c_void, buf.len()) };
-    if ret == -1 {
+    trace!("pcap_inject({:p}, {:?}, {})", pcap_t.pcap_t, buf.as_ptr(), buf.len());
+    let ret = unsafe {
+        libpcap::pcap_inject(pcap_t.pcap_t, buf.as_ptr() as *const c_void, buf.len())
+    };
+    if ret < 0 {
         return Err(get_error(pcap_t)?);
     }
     Ok(ret as usize)
