@@ -242,6 +242,7 @@ impl PcapIfT {
     pub fn find_interface_with_name(&self, name: &str) -> Option<Interface> {
         for interface in self.get_interfaces() {
             if interface.has_name(name) {
+                log::trace!("find_interface_with_name({}) = {:?}", name, interface);
                 return Some(interface)
             }
         }
@@ -251,6 +252,7 @@ impl PcapIfT {
     pub fn find_interface_with_ip(&self, ip: &IpAddr) -> Option<String> {
         for interface in self.get_interfaces() {
             if interface.has_address(ip) {
+                log::trace!("find_interface_with_ip({}) = {:?}", ip, interface);
                 return Some(interface.name);
             }
         }
