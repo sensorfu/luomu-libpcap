@@ -354,7 +354,7 @@ impl Iterator for InterfaceIter {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-enum Address {
+pub enum Address {
     Ipv4(Ipv4Addr),
     Ipv6(Ipv6Addr),
     Mac(MacAddr),
@@ -529,7 +529,7 @@ impl Iterator for AddressIter {
         } else {
             // Address was something we don't know how to handle. Move
             // to next address in list.
-            return self.next();
+            self.next()
         }
     }
 }
@@ -554,7 +554,7 @@ impl From<[u8; 6]> for MacAddr {
 }
 
 impl fmt::Debug for MacAddr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let h = self.0.iter().map(|b| format!("{:02x}", b)).collect::<Vec<_>>().join(":");
         f.write_str(&h)
     }

@@ -1,7 +1,6 @@
 use std::collections::BTreeSet;
-use std::convert::{TryFrom, TryInto};
 use std::ffi::{c_void, CStr, CString};
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::net::{Ipv4Addr, Ipv6Addr};
 use std::rc::Rc;
 
 use log::trace;
@@ -267,7 +266,7 @@ fn from_sockaddr(addr: *const libc::sockaddr) -> Option<Address> {
             let dl_sock: *const libc::sockaddr_dl = addr as *const libc::sockaddr_dl;
             let start = unsafe { (*dl_sock).sdl_nlen } as usize;
             let dl_addr: [u8; 6] = unsafe {[
-                *(*dl_sock).sdl_data.get(start+0)? as u8,
+                *(*dl_sock).sdl_data.get(start)? as u8,
                 *(*dl_sock).sdl_data.get(start+1)? as u8,
                 *(*dl_sock).sdl_data.get(start+2)? as u8,
                 *(*dl_sock).sdl_data.get(start+3)? as u8,
