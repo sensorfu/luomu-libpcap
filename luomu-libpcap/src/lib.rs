@@ -68,6 +68,10 @@ impl Pcap {
     pub fn inject(&self, buf: &[u8]) -> Result<usize> {
         pcap_inject(&self.pcap_t, buf)
     }
+
+    pub fn activate(&self) -> Result<()> {
+        pcap_activate(&self.pcap_t)
+    }
 }
 
 impl Deref for Pcap {
