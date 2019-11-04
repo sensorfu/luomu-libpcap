@@ -378,6 +378,42 @@ impl Address {
     pub fn is_ip(&self) -> bool {
         self.is_ipv4() || self.is_ipv6()
     }
+
+    pub fn is_mac(&self) -> bool {
+        match self {
+            Address::Mac(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn as_ipv4(&self) -> Option<Ipv4Addr> {
+        match self {
+            Address::Ipv4(ip) => Some(*ip),
+            _ => None,
+        }
+    }
+
+    pub fn as_ipv6(&self) -> Option<Ipv6Addr> {
+        match self {
+            Address::Ipv6(ip) => Some(*ip),
+            _ => None,
+        }
+    }
+
+    pub fn as_ip(&self) -> Option<IpAddr> {
+        match self {
+            Address::Ipv4(ip) => Some((*ip).into()),
+            Address::Ipv6(ip) => Some((*ip).into()),
+            _ => None,
+        }
+    }
+
+    pub fn as_mac(&self) -> Option<MacAddr> {
+        match self {
+            Address::Mac(mac) => Some(*mac),
+            _ => None,
+        }
+    }
 }
 
 impl From<Ipv4Addr> for Address {
@@ -401,9 +437,21 @@ impl From<IpAddr> for Address {
     }
 }
 
+impl From<MacAddr> for Address {
+    fn from(mac: MacAddr) -> Self {
+        Address::Mac(mac)
+    }
+}
+
 impl From<[u8; 6]> for Address {
     fn from(mac: [u8; 6]) -> Self {
-        Address::Mac(MacAddr(mac))
+        Address::Mac(MacAddr::from(mac))
+    }
+}
+
+impl From<&[u8; 6]> for Address {
+    fn from(mac: &[u8; 6]) -> Self {
+        Address::Mac(MacAddr::from(mac))
     }
 }
 
@@ -550,6 +598,12 @@ pub struct MacAddr([u8; 6]);
 impl From<[u8; 6]> for MacAddr {
     fn from(val: [u8; 6]) -> Self {
         Self(val)
+    }
+}
+
+impl From<&[u8; 6]> for MacAddr {
+    fn from(val: &[u8; 6]) -> Self {
+        Self(val.to_owned())
     }
 }
 
