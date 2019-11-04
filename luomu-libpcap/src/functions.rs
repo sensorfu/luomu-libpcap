@@ -6,7 +6,7 @@ use std::rc::Rc;
 use log::trace;
 
 use luomu_libpcap_sys as libpcap;
-use crate::Address;
+use crate::{Address, MacAddr};
 
 use super::{
     AddressIter, Error, Interface, InterfaceAddress, InterfaceFlag, Packet, PcapFilter, PcapIfT,
@@ -245,24 +245,29 @@ pub(crate) fn try_interface_from(pcap_if_t: *mut libpcap::pcap_if_t) -> Result<I
 
 fn from_sockaddr(addr: *const libc::sockaddr) -> Option<Address> {
     trace!("from_sockaddr({:p})", addr);
+
     if addr.is_null() {
         return None;
     }
+
     let family = unsafe { (*addr).sa_family };
+
     match i32::from(family) {
+
         libc::AF_INET => {
             let inet4: *const libc::sockaddr_in = addr as *const libc::sockaddr_in;
-            let s_addr = unsafe { (*inet4).sin_addr.s_addr };
+            let s_addr: u32 = unsafe { (*inet4).sin_addr.s_addr };
             Some(Ipv4Addr::from(u32::from_be(s_addr)).into())
         }
+
         libc::AF_INET6 => {
             let inet6: *const libc::sockaddr_in6 = addr as *const libc::sockaddr_in6;
-            let s6_addr = unsafe { (*inet6).sin6_addr.s6_addr };
+            let s6_addr: [u8; 16] = unsafe { (*inet6).sin6_addr.s6_addr };
             Some(Ipv6Addr::from(s6_addr).into())
         }
+
         #[cfg(target_os = "macos")]
         libc::AF_LINK => {
-            // Link local address aka interface MAC/Ethernet address
             let dl_sock: *const libc::sockaddr_dl = addr as *const libc::sockaddr_dl;
             let start = unsafe { (*dl_sock).sdl_nlen } as usize;
             let dl_addr: [u8; 6] = unsafe {[
@@ -273,8 +278,17 @@ fn from_sockaddr(addr: *const libc::sockaddr) -> Option<Address> {
                 *(*dl_sock).sdl_data.get(start+4)? as u8,
                 *(*dl_sock).sdl_data.get(start+5)? as u8,
             ]};
-            Some(dl_addr.into())
+            Some(MacAddr::from(dl_addr).into())
         }
+
+        #[cfg(target_os = "linux")]
+        libc::AF_PACKET => {
+            let ll_sock: *const libc::sockaddr_ll = addr as *const libc::sockaddr_ll;
+            let mut ll_addr = [0u8; 6];
+            ll_addr.copy_from_slice( unsafe { &(*ll_sock).sll_addr[0..6] } );
+            Some(MacAddr::from(ll_addr).into())
+        }
+
         n => {
             log::error!("Unsupported sa_family {}", n);
             None
