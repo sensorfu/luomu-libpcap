@@ -5,8 +5,8 @@ use std::rc::Rc;
 
 use log::trace;
 
-use luomu_libpcap_sys as libpcap;
 use crate::{Address, MacAddr};
+use luomu_libpcap_sys as libpcap;
 
 use super::{
     AddressIter, Error, Interface, InterfaceAddress, InterfaceFlag, Packet, PcapFilter, PcapIfT,
@@ -93,10 +93,14 @@ pub fn get_error(pcap_t: &PcapT) -> Result<Error> {
 }
 
 pub fn pcap_inject(pcap_t: &PcapT, buf: &[u8]) -> Result<usize> {
-    trace!("pcap_inject({:p}, {:?}, {})", pcap_t.pcap_t, buf.as_ptr(), buf.len());
-    let ret = unsafe {
-        libpcap::pcap_inject(pcap_t.pcap_t, buf.as_ptr() as *const c_void, buf.len())
-    };
+    trace!(
+        "pcap_inject({:p}, {:?}, {})",
+        pcap_t.pcap_t,
+        buf.as_ptr(),
+        buf.len()
+    );
+    let ret =
+        unsafe { libpcap::pcap_inject(pcap_t.pcap_t, buf.as_ptr() as *const c_void, buf.len()) };
     if ret < 0 {
         return Err(get_error(pcap_t)?);
     }
@@ -253,7 +257,6 @@ fn from_sockaddr(addr: *const libc::sockaddr) -> Option<Address> {
     let family = unsafe { (*addr).sa_family };
 
     match i32::from(family) {
-
         libc::AF_INET => {
             let inet4: *const libc::sockaddr_in = addr as *const libc::sockaddr_in;
             let s_addr: u32 = unsafe { (*inet4).sin_addr.s_addr };
@@ -270,14 +273,16 @@ fn from_sockaddr(addr: *const libc::sockaddr) -> Option<Address> {
         libc::AF_LINK => {
             let dl_sock: *const libc::sockaddr_dl = addr as *const libc::sockaddr_dl;
             let start = unsafe { (*dl_sock).sdl_nlen } as usize;
-            let dl_addr: [u8; 6] = unsafe {[
-                *(*dl_sock).sdl_data.get(start)? as u8,
-                *(*dl_sock).sdl_data.get(start+1)? as u8,
-                *(*dl_sock).sdl_data.get(start+2)? as u8,
-                *(*dl_sock).sdl_data.get(start+3)? as u8,
-                *(*dl_sock).sdl_data.get(start+4)? as u8,
-                *(*dl_sock).sdl_data.get(start+5)? as u8,
-            ]};
+            let dl_addr: [u8; 6] = unsafe {
+                [
+                    *(*dl_sock).sdl_data.get(start)? as u8,
+                    *(*dl_sock).sdl_data.get(start + 1)? as u8,
+                    *(*dl_sock).sdl_data.get(start + 2)? as u8,
+                    *(*dl_sock).sdl_data.get(start + 3)? as u8,
+                    *(*dl_sock).sdl_data.get(start + 4)? as u8,
+                    *(*dl_sock).sdl_data.get(start + 5)? as u8,
+                ]
+            };
             Some(MacAddr::from(dl_addr).into())
         }
 
@@ -285,7 +290,7 @@ fn from_sockaddr(addr: *const libc::sockaddr) -> Option<Address> {
         libc::AF_PACKET => {
             let ll_sock: *const libc::sockaddr_ll = addr as *const libc::sockaddr_ll;
             let mut ll_addr = [0u8; 6];
-            ll_addr.copy_from_slice( unsafe { &(*ll_sock).sll_addr[0..6] } );
+            ll_addr.copy_from_slice(unsafe { &(*ll_sock).sll_addr[0..6] });
             Some(MacAddr::from(ll_addr).into())
         }
 
