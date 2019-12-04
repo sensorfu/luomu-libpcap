@@ -169,8 +169,8 @@ impl<'p> Iterator for PcapIter<'p> {
                     // even if the immediate mode is set. Just retry in
                     // this case.
                     Error::Timeout => continue,
-                    _ => return None
-                }
+                    _ => return None,
+                },
             }
         }
     }
@@ -247,7 +247,7 @@ impl PcapIfT {
         for interface in self.get_interfaces() {
             if interface.has_name(name) {
                 log::trace!("find_interface_with_name({}) = {:?}", name, interface);
-                return Some(interface)
+                return Some(interface);
             }
         }
         None
@@ -305,7 +305,10 @@ impl Interface {
     }
 
     pub fn get_ip_addresses(&self) -> HashSet<IpAddr> {
-        self.addresses.iter().filter_map(|i| IpAddr::try_from(&i.addr).ok()).collect()
+        self.addresses
+            .iter()
+            .filter_map(|i| IpAddr::try_from(&i.addr).ok())
+            .collect()
     }
 
     pub fn has_address(&self, ip: &IpAddr) -> bool {
@@ -609,7 +612,12 @@ impl From<&[u8; 6]> for MacAddr {
 
 impl fmt::Debug for MacAddr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let h = self.0.iter().map(|b| format!("{:02x}", b)).collect::<Vec<_>>().join(":");
+        let h = self
+            .0
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<Vec<_>>()
+            .join(":");
         f.write_str(&h)
     }
 }
@@ -627,7 +635,7 @@ mod tests {
 
     #[test]
     fn test_packet_to_owned() {
-        let buf = vec![1,2,3,4];
+        let buf = vec![1, 2, 3, 4];
         let packet = Packet::from_slice(&buf);
         let owned = packet.to_owned();
         if let Packet::Owned(p) = owned {
