@@ -63,6 +63,8 @@ fn compile(out_dir: &str, source_dir: &Path) -> io::Result<()> {
         .arg("--disable-universal")
         .arg("--enable-shared=no")
         .arg("--enable-usb=no")
+        .arg("--without-libnl")
+        .arg("--disable-dbus")
         .arg(target_arg)
         .arg(host_arg)
         .output()?;
