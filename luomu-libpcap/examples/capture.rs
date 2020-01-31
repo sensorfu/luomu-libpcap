@@ -8,6 +8,7 @@ fn main() -> Result<()> {
         .set_immediate(true)?
         .set_filter("udp")?
         .set_snaplen(65535)?
+        .set_buffer_size(512 * 1024)?
         .activate()?;
 
     for packet in pcap.capture() {

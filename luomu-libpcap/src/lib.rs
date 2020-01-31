@@ -89,6 +89,11 @@ pub struct PcapBuilder {
 }
 
 impl PcapBuilder {
+    pub fn set_buffer_size(self, buffer_size: usize) -> Result<PcapBuilder> {
+        pcap_set_buffer_size(&self.pcap_t, buffer_size)?;
+        Ok(self)
+    }
+
     pub fn set_promiscuous(self, promiscuous: bool) -> Result<PcapBuilder> {
         pcap_set_promisc(&self.pcap_t, promiscuous)?;
         Ok(self)
