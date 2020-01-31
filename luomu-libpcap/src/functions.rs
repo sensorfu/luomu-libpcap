@@ -38,6 +38,16 @@ pub fn pcap_close(pcap_t: &mut PcapT) {
     pcap_t.errbuf = Vec::new();
 }
 
+pub fn pcap_set_buffer_size(pcap_t: &PcapT, buffer_size: usize) -> Result<()> {
+    trace!("pcap_set_buffer_size({:p}, {})", pcap_t.pcap_t, buffer_size);
+    let ret = unsafe { libpcap::pcap_set_buffer_size(pcap_t.pcap_t, buffer_size as libc::c_int) };
+    match ret {
+        0 => Ok(()),
+        libpcap::PCAP_ERROR_ACTIVATED => Err(Error::AlreadyActivated),
+        n => panic!("Unknown return code {}", n),
+    }
+}
+
 pub fn pcap_set_promisc(pcap_t: &PcapT, promiscuous: bool) -> Result<()> {
     trace!("pcap_set_promisc({:p}, {})", pcap_t.pcap_t, promiscuous);
     let promisc = if promiscuous { 1 } else { 0 };
