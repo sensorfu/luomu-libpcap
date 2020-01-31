@@ -1,9 +1,9 @@
 #!/bin/sh -e
 
-LIBPCAP='libpcap-1.9.0'
+LIBPCAP='libpcap-1.9.1'
 OUT='src/bindings.rs'
 
-./verify "${LIBPCAP}.tar.gz"
+./verify.sh "${LIBPCAP}.tar.gz"
 
 DEST=$(mktemp -d)
 mkdir -p "${DEST}"
@@ -19,6 +19,7 @@ bindgen \
     --whitelist-type='^pcap_.*' \
     --whitelist-var='^PCAP_.*' \
     --blacklist-type='^__.*' \
+    --blacklist-type='^sa_.*' \
     --blacklist-type='^sockaddr' \
     --blacklist-type='^timeval' \
     --blacklist-type='FILE' \

@@ -732,6 +732,9 @@ extern "C" {
     pub fn pcap_datalink_val_to_description(arg1: libc::c_int) -> *const libc::c_char;
 }
 extern "C" {
+    pub fn pcap_datalink_val_to_description_or_dlt(arg1: libc::c_int) -> *const libc::c_char;
+}
+extern "C" {
     pub fn pcap_snapshot(arg1: *mut pcap_t) -> libc::c_int;
 }
 extern "C" {
@@ -879,7 +882,7 @@ extern "C" {
 }
 extern "C" {
     pub fn pcap_findalldevs_ex(
-        source: *mut libc::c_char,
+        source: *const libc::c_char,
         auth: *mut pcap_rmtauth,
         alldevs: *mut *mut pcap_if_t,
         errbuf: *mut libc::c_char,
