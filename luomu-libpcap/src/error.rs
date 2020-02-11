@@ -17,6 +17,8 @@ pub enum Error {
     PcapError(String),
     /// Warning from `libpcap`
     PcapWarning(String),
+    /// Unknown error code from `libpcap`.
+    PcapErrorCode(i32),
 }
 
 impl error::Error for Error {}
@@ -31,6 +33,7 @@ impl fmt::Display for Error {
             Error::CStringError(err) => err.fmt(f),
             Error::PcapError(err) => write!(f, "libpcap error: {}", err),
             Error::PcapWarning(warn) => write!(f, "libpcap warning: {}", warn),
+            Error::PcapErrorCode(code) => write!(f, "libpcap unknown error code: {}", code),
         }
     }
 }

@@ -44,7 +44,7 @@ pub fn pcap_set_buffer_size(pcap_t: &PcapT, buffer_size: usize) -> Result<()> {
     match ret {
         0 => Ok(()),
         libpcap::PCAP_ERROR_ACTIVATED => Err(Error::AlreadyActivated),
-        n => panic!("Unknown return code {}", n),
+        n => Err(Error::PcapErrorCode(n)),
     }
 }
 
@@ -55,7 +55,7 @@ pub fn pcap_set_promisc(pcap_t: &PcapT, promiscuous: bool) -> Result<()> {
     match ret {
         0 => Ok(()),
         libpcap::PCAP_ERROR_ACTIVATED => Err(Error::AlreadyActivated),
-        n => panic!("Unknown return code {}", n),
+        n => Err(Error::PcapErrorCode(n)),
     }
 }
 
@@ -65,7 +65,7 @@ pub fn pcap_set_snaplen(pcap_t: &PcapT, snaplen: usize) -> Result<()> {
     match ret {
         0 => Ok(()),
         libpcap::PCAP_ERROR_ACTIVATED => Err(Error::AlreadyActivated),
-        n => panic!("Unknown return code {}", n),
+        n => Err(Error::PcapErrorCode(n)),
     }
 }
 
@@ -80,7 +80,7 @@ pub fn pcap_set_immediate_mode(pcap_t: &PcapT, immediate: bool) -> Result<()> {
     match ret {
         0 => Ok(()),
         libpcap::PCAP_ERROR_ACTIVATED => Err(Error::AlreadyActivated),
-        n => panic!("Unknown return code {}", n),
+        n => Err(Error::PcapErrorCode(n)),
     }
 }
 
@@ -170,7 +170,7 @@ pub fn pcap_next_ex<'p>(pcap_t: &PcapT) -> Result<Packet<'p>> {
         0 => return Err(Error::Timeout),
         -1 => return Err(get_error(pcap_t)?),
         -2 => return Err(Error::NoMorePackets),
-        n => panic!("Unknown return code {}", n),
+        n => return Err(Error::PcapErrorCode(n)),
     }
 
     if header.is_null() || packet.is_null() {
