@@ -385,6 +385,11 @@ mod tests {
     // and it reproduces issue described in above pull request.
     #[test]
     fn test_pcap_t_drop() {
-        let _pcap_t: PcapT = pcap_create("any").expect("pcap_create");
+        let _pcap_t: PcapT = pcap_create("").expect("pcap_create");
+    }
+
+    #[test]
+    fn test_pcap_if_t() {
+        let _pcap_if_t: PcapIfT = pcap_findalldevs().expect("pcap_findalldevs");
     }
 }
