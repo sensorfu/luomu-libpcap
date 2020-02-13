@@ -1,0 +1,30 @@
+on: push
+
+name: Run Sanitizers
+
+jobs:
+  sanitizers:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, macos-latest]
+        sanitizer: [address, leak]
+
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Install dependencies
+        run: sudo apt -y update && sudo apt -y install flex bison
+        if: matrix.os != 'macos-latest'
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+
+      - uses: actions-rs/cargo@v1
+        env:
+          RUSTFLAGS: -Z sanitizer=${{ matrix.sanitizer }}
+        with:
+          command: test
