@@ -29,9 +29,9 @@ impl PcapT {
     }
 }
 
-impl Drop for Pcap {
+impl Drop for PcapT {
     fn drop(&mut self) {
-        pcap_close(&mut self.pcap_t)
+        pcap_close(self)
     }
 }
 
