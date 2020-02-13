@@ -370,3 +370,21 @@ fn status_to_str(error: libc::c_int) -> Result<String> {
     let status = cstr.to_str()?.to_owned();
     Ok(status)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Test for https://github.com/sensorfu/luomu-libpcap/pull/10
+    //
+    // Alone this is trivial and doesn't do much, but combine it with Clang's
+    // LeakSanitizer:
+    //
+    //   $ RUSTFLAGS="-Z sanitizer=leak" cargo +nightly test
+    //
+    // and it reproduces issue described in above pull request.
+    #[test]
+    fn test_pcap_t_drop() {
+        let _pcap_t: PcapT = pcap_create("any").expect("pcap_create");
+    }
+}
