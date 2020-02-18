@@ -1,3 +1,17 @@
+//! Safe wrappers for `libpcap` functions.
+//!
+//! The functions in this module call the libpcap functions of the same name,
+//! but provide safe (as opposite of unsafe) and Rust'y interface to them.
+//! Functions handle libpcap errors and use `Result` to return either `Ok` on
+//! success or `Err` on failure.
+//!
+//! Documentation for functions is copied from
+//! <https://www.tcpdump.org/manpages/> and modified as needed to fit the
+//! implementations.
+//!
+//! Log level of "trace" (see <https://docs.rs/log/>) is used to log invocations
+//! of these functions.
+
 use std::collections::BTreeSet;
 use std::ffi::{c_void, CStr, CString};
 use std::mem::MaybeUninit;
@@ -19,6 +33,13 @@ use super::{
 const PCAP_SUCCESS: i32 = 0;
 const PCAP_ERROR: i32 = libpcap::PCAP_ERROR;
 
+/// Create a live capture handle
+///
+/// `pcap_create()` is used to create a packet capture handle to look at packets
+/// on the network. `source` is a string that specifies the network device to
+/// open.
+///
+/// <https://www.tcpdump.org/manpages/pcap_create.3pcap.html>
 pub fn pcap_create(source: &str) -> Result<PcapT> {
     let mut errbuf: Vec<u8> = vec![0; libpcap::PCAP_ERRBUF_SIZE as usize];
     let source = CString::new(source)?;
@@ -37,18 +58,37 @@ pub fn pcap_create(source: &str) -> Result<PcapT> {
     Ok(PcapT { pcap_t, errbuf })
 }
 
+/// Close a capture device or savefile
+///
+/// `pcap_close()` closes the files associated with `PcapT` and deallocates
+/// resources.
+///
+/// <https://www.tcpdump.org/manpages/pcap_close.3pcap.html>
 pub fn pcap_close(pcap_t: PcapT) {
     trace!("pcap_close({:p})", pcap_t.pcap_t);
     // PcapT is owned by this function and dropped at this point since it's no
     // longer needed. Dropping frees the allocated resources.
 }
 
+/// set the buffer size for a not-yet-activated capture handle
+///
+/// `pcap_set_buffer_size()` sets the buffer size that will be used on a capture
+/// handle when the handle is activated to buffer_size, which is in units of
+/// bytes.
+///
+/// <https://www.tcpdump.org/manpages/pcap_set_buffer_size.3pcap.html>
 pub fn pcap_set_buffer_size(pcap_t: &PcapT, buffer_size: usize) -> Result<()> {
     trace!("pcap_set_buffer_size({:p}, {})", pcap_t.pcap_t, buffer_size);
     let ret = unsafe { libpcap::pcap_set_buffer_size(pcap_t.pcap_t, buffer_size as libc::c_int) };
     check_pcap_error(pcap_t, ret)
 }
 
+/// set promiscuous mode for a not-yet-activated capture handle
+///
+/// `pcap_set_promisc()` sets whether promiscuous mode should be set on a
+/// capture handle when the handle is activated.
+///
+/// <https://www.tcpdump.org/manpages/pcap_set_promisc.3pcap.html>
 pub fn pcap_set_promisc(pcap_t: &PcapT, promiscuous: bool) -> Result<()> {
     trace!("pcap_set_promisc({:p}, {})", pcap_t.pcap_t, promiscuous);
     let promisc = if promiscuous { 1 } else { 0 };
@@ -56,12 +96,25 @@ pub fn pcap_set_promisc(pcap_t: &PcapT, promiscuous: bool) -> Result<()> {
     check_pcap_error(pcap_t, ret)
 }
 
+/// set the snapshot length for a not-yet-activated capture handle
+///
+/// `pcap_set_snaplen()` sets the snapshot length to be used on a capture handle
+/// when the handle is activated to snaplen.
+///
+/// <https://www.tcpdump.org/manpages/pcap_set_snaplen.3pcap.html>
 pub fn pcap_set_snaplen(pcap_t: &PcapT, snaplen: usize) -> Result<()> {
     trace!("pcap_set_snaplen({:p}, {})", pcap_t.pcap_t, snaplen);
     let ret = unsafe { libpcap::pcap_set_snaplen(pcap_t.pcap_t, snaplen as libc::c_int) };
     check_pcap_error(pcap_t, ret)
 }
 
+/// set immediate mode for a not-yet-activated capture handle
+///
+/// `pcap_set_immediate_mode()` sets whether immediate mode should be set on a
+/// capture handle when the handle is activated. In immediate mode, packets are
+/// always delivered as soon as they arrive, with no buffering.
+///
+/// <https://www.tcpdump.org/manpages/pcap_set_immediate_mode.3pcap.html>
 pub fn pcap_set_immediate_mode(pcap_t: &PcapT, immediate: bool) -> Result<()> {
     trace!(
         "pcap_set_immediate_mode({:p}, {})",
@@ -73,6 +126,13 @@ pub fn pcap_set_immediate_mode(pcap_t: &PcapT, immediate: bool) -> Result<()> {
     check_pcap_error(pcap_t, ret)
 }
 
+/// activate a capture handle
+///
+/// `pcap_activate()` is used to activate a packet capture handle to look at
+/// packets on the network, with the options that were set on the handle being
+/// in effect.
+///
+/// <https://www.tcpdump.org/manpages/pcap_activate.3pcap.html>
 pub fn pcap_activate(pcap_t: &PcapT) -> Result<()> {
     trace!("pcap_activate({:p})", pcap_t.pcap_t);
     let ret = unsafe { libpcap::pcap_activate(pcap_t.pcap_t) };
@@ -88,6 +148,15 @@ pub fn pcap_activate(pcap_t: &PcapT) -> Result<()> {
     Ok(())
 }
 
+/// get libpcap error message text
+///
+/// `pcap_geterr()` returns the error pertaining to the last pcap library error.
+///
+/// This function can also fail, how awesome is that? The `Result` of
+/// `Ok(Error)` contains the error from libpcap as intended. `Err(Error)`
+/// contains the error happened while calling this function.
+///
+/// <https://www.tcpdump.org/manpages/pcap_geterr.3pcap.html>
 pub fn get_error(pcap_t: &PcapT) -> Result<Error> {
     trace!("get_error({:p})", pcap_t.pcap_t);
     let ptr = unsafe { libpcap::pcap_geterr(pcap_t.pcap_t) };
@@ -96,11 +165,25 @@ pub fn get_error(pcap_t: &PcapT) -> Result<Error> {
     Ok(Error::PcapError(err))
 }
 
+/// get capture statistics
+///
+///  `pcap_stats()` fills in the struct `PcapStat` pointed to by its second
+///  argument. The values represent packet statistics from the start of the run
+///  to the time of the call.
+///
+/// <https://www.tcpdump.org/manpages/pcap_stats.3pcap.html>
 pub fn pcap_stats(pcap_t: &PcapT, stat: &mut PcapStat) -> Result<()> {
     let ret = unsafe { libpcap::pcap_stats(pcap_t.pcap_t, &mut stat.stats) };
     check_pcap_error(pcap_t, ret)
 }
 
+/// transmit a packet
+///
+/// `pcap_inject()` sends a raw packet through the network interface; buf points
+/// to the data of the packet, including the link-layer header, and size is the
+/// number of bytes in the packet.
+///
+/// <https://www.tcpdump.org/manpages/pcap_inject.3pcap.html>
 pub fn pcap_inject(pcap_t: &PcapT, buf: &[u8]) -> Result<usize> {
     trace!(
         "pcap_inject({:p}, {:?}, {})",
@@ -115,6 +198,18 @@ pub fn pcap_inject(pcap_t: &PcapT, buf: &[u8]) -> Result<usize> {
     Ok(ret as usize)
 }
 
+/// compile a filter expression
+///
+/// `pcap_compile()` is used to compile the filter into a filter program. See
+/// [pcap-filter(7)](https://www.tcpdump.org/manpages/pcap-filter.7.html) for
+/// the syntax of that string.
+///
+/// Optimization of the filter is not performed and by default.
+///
+/// C library's `pcap_compile()` supports specifying IPv4 netmask, but we use
+/// `PCAP_NETMASK_UNKNOWN` by default.
+///
+/// <https://www.tcpdump.org/manpages/pcap_compile.3pcap.html>
 pub fn pcap_compile(pcap_t: &PcapT, filter: &str) -> Result<PcapFilter> {
     trace!("pcap_compile({:p}, {})", pcap_t.pcap_t, filter);
     let mut bpf_program: MaybeUninit<libpcap::bpf_program> = MaybeUninit::zeroed();
@@ -140,6 +235,13 @@ pub fn pcap_compile(pcap_t: &PcapT, filter: &str) -> Result<PcapFilter> {
     Ok(PcapFilter { bpf_program })
 }
 
+/// set the filter
+///
+/// `pcap_setfilter()` is used to specify a filter program. pcap_filter is a
+/// reference  to a `PcapFilter`, usually the result of a call to
+/// `pcap_compile()`.
+///
+/// <https://www.tcpdump.org/manpages/pcap_setfilter.3pcap.html>
 pub fn pcap_setfilter(pcap_t: &PcapT, pcap_filter: &mut PcapFilter) -> Result<()> {
     trace!(
         "pcap_setfilter({:p}, {:p})",
@@ -151,13 +253,25 @@ pub fn pcap_setfilter(pcap_t: &PcapT, pcap_filter: &mut PcapFilter) -> Result<()
     check_pcap_error(pcap_t, ret)
 }
 
+/// free a BPF program
+///
+/// `pcap_freecode()` is used to free up allocated memory pointed to by a
+/// bpf_program struct generated by `pcap_compile()` when that BPF program is no
+/// longer needed, for example after it has been made the filter program for a
+/// pcap structure by a call to `pcap_setfilter()`.
+///
+/// <https://www.tcpdump.org/manpages/pcap_freecode.3pcap.html>
 pub fn pcap_freecode(pcap_filter: PcapFilter) {
     trace!("pcap_freecode({:p})", &pcap_filter.bpf_program);
     // PcapFilter is owned by this function and dropped at this point since it's
     // no longer needed. Dropping frees the allocated resources.
 }
 
+/// read the next packet from a `PcapT`
+///
 /// If data is needed, copy it before calling this again.
+///
+/// <https://www.tcpdump.org/manpages/pcap_next_ex.3pcap.html>
 pub fn pcap_next_ex<'p>(pcap_t: &PcapT) -> Result<Packet<'p>> {
     trace!("pcap_next_ex({:p})", pcap_t.pcap_t);
     let mut header: *mut libpcap::pcap_pkthdr = std::ptr::null_mut();
@@ -185,6 +299,16 @@ pub fn pcap_next_ex<'p>(pcap_t: &PcapT) -> Result<Packet<'p>> {
     Ok(Packet::Borrowed(Rc::new(raw)))
 }
 
+/// get a list of capture devices
+///
+/// `pcap_findalldevs()` constructs a list of network devices that can be opened
+/// with `pcap_create()` and `pcap_activate()` or with `pcap_open_live()`. Note
+/// that there may be network devices that cannot be opened by the process
+/// calling `pcap_findalldevs()`, because, for example, that process does not
+/// have sufficient privileges to open them for capturing; if so, those devices
+/// will not appear on the list.
+///
+/// <https://www.tcpdump.org/manpages/pcap_findalldevs.3pcap.html>
 pub fn pcap_findalldevs() -> Result<PcapIfT> {
     let mut pcap_if_t: *mut libpcap::pcap_if_t = std::ptr::null_mut();
     let mut errbuf: Vec<u8> = vec![0; libpcap::PCAP_ERRBUF_SIZE as usize];
@@ -207,6 +331,11 @@ pub fn pcap_findalldevs() -> Result<PcapIfT> {
     }
 }
 
+/// free a list of capture devices
+///
+/// Free a list of network devices produced by `pcap_findalldevs()`.
+///
+/// <https://www.tcpdump.org/manpages/pcap_findalldevs.3pcap.html>
 pub fn pcap_freealldevs(pcap_if_t: PcapIfT) {
     trace!("pcap_freealldevs({:p})", pcap_if_t.pcap_if_t);
     // PcapIfT is owned by this function and dropped at this point since it's no
