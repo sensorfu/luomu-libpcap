@@ -1,6 +1,7 @@
 use std::error;
 use std::fmt;
 
+/// Errors produced by luomu-libpcap.
 #[derive(Debug)]
 pub enum Error {
     /// Loop terminated by pcap_breakloop (PCAP_ERROR_BREAK).
