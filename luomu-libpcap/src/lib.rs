@@ -1,5 +1,6 @@
 use std::collections::{BTreeSet, HashSet};
 use std::convert::TryFrom;
+use std::default;
 use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::ops::Deref;
@@ -71,6 +72,14 @@ impl Pcap {
 
     pub fn activate(&self) -> Result<()> {
         pcap_activate(&self.pcap_t)
+    }
+
+    pub fn stats(&self) -> Result<PcapStat> {
+        let mut stats: PcapStat = Default::default();
+        match pcap_stats(&self.pcap_t, &mut stats) {
+            Ok(()) => Ok(stats),
+            Err(e) => Err(e),
+        }
     }
 }
 
@@ -178,6 +187,36 @@ impl<'p> Iterator for PcapIter<'p> {
                 },
             }
         }
+    }
+}
+
+pub struct PcapStat {
+    stats: libpcap::pcap_stat,
+}
+
+impl default::Default for PcapStat {
+    fn default() -> Self {
+        PcapStat {
+            stats: libpcap::pcap_stat {
+                ps_recv: 0,
+                ps_drop: 0,
+                ps_ifdrop: 0,
+            },
+        }
+    }
+}
+
+impl PcapStat {
+    pub fn packets_received(&self) -> u32 {
+        self.stats.ps_recv
+    }
+
+    pub fn packets_dropped(&self) -> u32 {
+        self.stats.ps_drop
+    }
+
+    pub fn packets_dropped_interface(&self) -> u32 {
+        self.stats.ps_ifdrop
     }
 }
 
