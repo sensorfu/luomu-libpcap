@@ -10,7 +10,7 @@ use luomu_libpcap_sys as libpcap;
 
 use super::{
     AddressIter, Error, Interface, InterfaceAddress, InterfaceFlag, Packet, PcapFilter, PcapIfT,
-    PcapT, Result,
+    PcapStat, PcapT, Result,
 };
 
 pub fn pcap_create(source: &str) -> Result<PcapT> {
@@ -100,6 +100,15 @@ pub fn get_error(pcap_t: &PcapT) -> Result<Error> {
     let cstr = unsafe { CStr::from_ptr(ptr) };
     let err = cstr.to_str()?.to_owned();
     Ok(Error::PcapError(err))
+}
+
+pub fn pcap_stats(pcap_t: &PcapT, stat: &mut PcapStat) -> Result<()> {
+    let ret = unsafe { libpcap::pcap_stats(pcap_t.pcap_t, &mut stat.stats) };
+    match ret {
+        0 => Ok(()),
+        -1 => Err(get_error(pcap_t)?),
+        n => Err(Error::PcapWarning(status_to_str(n)?)),
+    }
 }
 
 pub fn pcap_inject(pcap_t: &PcapT, buf: &[u8]) -> Result<usize> {
