@@ -1,5 +1,6 @@
 use std::collections::BTreeSet;
 use std::ffi::{c_void, CStr, CString};
+use std::mem::MaybeUninit;
 use std::net::{Ipv4Addr, Ipv6Addr};
 use std::rc::Rc;
 
@@ -116,7 +117,7 @@ pub fn pcap_inject(pcap_t: &PcapT, buf: &[u8]) -> Result<usize> {
 
 pub fn pcap_compile(pcap_t: &PcapT, filter: &str) -> Result<PcapFilter> {
     trace!("pcap_compile({:p}, {})", pcap_t.pcap_t, filter);
-    let mut bpf_program: libpcap::bpf_program = unsafe { std::mem::zeroed() };
+    let mut bpf_program: MaybeUninit<libpcap::bpf_program> = MaybeUninit::zeroed();
     let filter = CString::new(filter)?;
     let optimize = 0;
     let netmask = libpcap::PCAP_NETMASK_UNKNOWN;
@@ -124,7 +125,7 @@ pub fn pcap_compile(pcap_t: &PcapT, filter: &str) -> Result<PcapFilter> {
     let ret = unsafe {
         libpcap::pcap_compile(
             pcap_t.pcap_t,
-            &mut bpf_program,
+            bpf_program.as_mut_ptr(),
             filter.as_ptr(),
             optimize,
             netmask,
@@ -132,6 +133,10 @@ pub fn pcap_compile(pcap_t: &PcapT, filter: &str) -> Result<PcapFilter> {
     };
 
     check_pcap_error(pcap_t, ret)?;
+
+    // pcap_compile() has been succesfully compiled so contents of bpf_program
+    // can be assumed to be valid.
+    let bpf_program = unsafe { bpf_program.assume_init() };
     Ok(PcapFilter { bpf_program })
 }
 
