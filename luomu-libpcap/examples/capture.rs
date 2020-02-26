@@ -11,6 +11,7 @@ fn main() -> Result<()> {
         .set_buffer_size(512 * 1024)?
         .activate()?;
 
+    let mut count = 0;
     for packet in pcap.capture() {
         let mut hex = String::new();
         for i in 0..packet.len() {
@@ -22,7 +23,19 @@ fn main() -> Result<()> {
             }
             hex.push_str(&format!("{:02x}", packet[i]));
         }
+        count += 1;
         println!("{}", hex);
+        if count % 100 == 0 && count != 0 {
+            match pcap.stats() {
+                Ok(stats) => println!(
+                    "\nStats: received: {} packets, dropped: {} packets, dropped on interface {} packets",
+                    stats.packets_received(),
+                    stats.packets_dropped(),
+                    stats.packets_dropped_interface()
+                ),
+                Err(_) => {}
+            }
+        }
     }
 
     Ok(())
