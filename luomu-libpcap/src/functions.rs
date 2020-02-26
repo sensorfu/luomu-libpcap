@@ -36,11 +36,10 @@ pub fn pcap_create(source: &str) -> Result<PcapT> {
     Ok(PcapT { pcap_t, errbuf })
 }
 
-pub fn pcap_close(pcap_t: &mut PcapT) {
-    trace!("get_close({:p})", pcap_t.pcap_t);
-    unsafe { libpcap::pcap_close(pcap_t.pcap_t) }
-    pcap_t.pcap_t = std::ptr::null_mut();
-    pcap_t.errbuf = Vec::new();
+pub fn pcap_close(pcap_t: PcapT) {
+    trace!("pcap_close({:p})", pcap_t.pcap_t);
+    // PcapT is owned by this function and dropped at this point since it's no
+    // longer needed. Dropping frees the allocated resources.
 }
 
 pub fn pcap_set_buffer_size(pcap_t: &PcapT, buffer_size: usize) -> Result<()> {
@@ -147,10 +146,10 @@ pub fn pcap_setfilter(pcap_t: &PcapT, pcap_filter: &mut PcapFilter) -> Result<()
     check_pcap_error(pcap_t, ret)
 }
 
-pub fn pcap_freecode(pcap_filter: &mut PcapFilter) {
+pub fn pcap_freecode(pcap_filter: PcapFilter) {
     trace!("pcap_freecode({:p})", &pcap_filter.bpf_program);
-    unsafe { libpcap::pcap_freecode(&mut pcap_filter.bpf_program) };
-    pcap_filter.bpf_program = unsafe { std::mem::zeroed() };
+    // PcapFilter is owned by this function and dropped at this point since it's
+    // no longer needed. Dropping frees the allocated resources.
 }
 
 /// If data is needed, copy it before calling this again.
@@ -203,10 +202,10 @@ pub fn pcap_findalldevs() -> Result<PcapIfT> {
     }
 }
 
-pub fn pcap_freealldevs(pcap_if_t: &mut PcapIfT) {
+pub fn pcap_freealldevs(pcap_if_t: PcapIfT) {
     trace!("pcap_freealldevs({:p})", pcap_if_t.pcap_if_t);
-    unsafe { libpcap::pcap_freealldevs(pcap_if_t.pcap_if_t) };
-    pcap_if_t.pcap_if_t = std::ptr::null_mut();
+    // PcapIfT is owned by this function and dropped at this point since it's no
+    // longer needed. Dropping frees the allocated resources.
 }
 
 pub(crate) fn try_interface_from(pcap_if_t: *mut libpcap::pcap_if_t) -> Result<Interface> {

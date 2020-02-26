@@ -32,7 +32,8 @@ impl PcapT {
 
 impl Drop for PcapT {
     fn drop(&mut self) {
-        pcap_close(self)
+        log::trace!("PcapT::drop({:p})", self.pcap_t);
+        unsafe { luomu_libpcap_sys::pcap_close(self.pcap_t) }
     }
 }
 
@@ -156,7 +157,8 @@ impl PcapFilter {
 
 impl Drop for PcapFilter {
     fn drop(&mut self) {
-        pcap_freecode(self)
+        log::trace!("PcapFilter::drop({:p})", &self.bpf_program);
+        unsafe { luomu_libpcap_sys::pcap_freecode(&mut self.bpf_program) }
     }
 }
 
@@ -310,7 +312,8 @@ impl PcapIfT {
 
 impl Drop for PcapIfT {
     fn drop(&mut self) {
-        pcap_freealldevs(self)
+        log::trace!("PcapIfT::drop({:?})", self.pcap_if_t);
+        unsafe { luomu_libpcap_sys::pcap_freealldevs(self.pcap_if_t) }
     }
 }
 
