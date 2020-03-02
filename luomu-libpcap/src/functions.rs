@@ -365,7 +365,7 @@ fn get_interface_flags(val: u32) -> BTreeSet<InterfaceFlag> {
 }
 
 fn status_to_str(error: libc::c_int) -> Result<String> {
-    trace!("status_to_str");
+    trace!("status_to_str({})", error);
     let ptr = unsafe { libpcap::pcap_statustostr(error) };
     let cstr = unsafe { CStr::from_ptr(ptr) };
     let status = cstr.to_str()?.to_owned();
@@ -374,7 +374,14 @@ fn status_to_str(error: libc::c_int) -> Result<String> {
 
 /// Check for `libpcap` error.
 fn check_pcap_error(pcap_t: &PcapT, ret: i32) -> Result<()> {
-    trace!("check_pcap_error({:p}, {})", pcap_t, ret);
+    if log::log_enabled!(log::Level::Trace) {
+        let status = match ret {
+            0 => "ok".to_string(),
+            n => status_to_str(n).unwrap_or_default(),
+        };
+        trace!("check_pcap_error({:p}, {}) = {}", pcap_t, ret, status);
+    }
+
     match ret {
         PCAP_SUCCESS => Ok(()),
         PCAP_ERROR => Err(get_error(pcap_t)?),
