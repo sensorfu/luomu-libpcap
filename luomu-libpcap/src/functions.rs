@@ -13,6 +13,11 @@ use super::{
     PcapStat, PcapT, Result,
 };
 
+// libpcap doesn't have constant for success, but man pages state 0 is success.
+// For symmetry define it here together with PCAP_ERROR.
+const PCAP_SUCCESS: i32 = 0;
+const PCAP_ERROR: i32 = libpcap::PCAP_ERROR;
+
 pub fn pcap_create(source: &str) -> Result<PcapT> {
     let mut errbuf: Vec<u8> = vec![0; libpcap::PCAP_ERRBUF_SIZE as usize];
     let source = CString::new(source)?;
@@ -41,32 +46,20 @@ pub fn pcap_close(pcap_t: &mut PcapT) {
 pub fn pcap_set_buffer_size(pcap_t: &PcapT, buffer_size: usize) -> Result<()> {
     trace!("pcap_set_buffer_size({:p}, {})", pcap_t.pcap_t, buffer_size);
     let ret = unsafe { libpcap::pcap_set_buffer_size(pcap_t.pcap_t, buffer_size as libc::c_int) };
-    match ret {
-        0 => Ok(()),
-        libpcap::PCAP_ERROR_ACTIVATED => Err(Error::AlreadyActivated),
-        n => Err(Error::PcapErrorCode(n)),
-    }
+    check_pcap_error(pcap_t, ret)
 }
 
 pub fn pcap_set_promisc(pcap_t: &PcapT, promiscuous: bool) -> Result<()> {
     trace!("pcap_set_promisc({:p}, {})", pcap_t.pcap_t, promiscuous);
     let promisc = if promiscuous { 1 } else { 0 };
     let ret = unsafe { libpcap::pcap_set_promisc(pcap_t.pcap_t, promisc) };
-    match ret {
-        0 => Ok(()),
-        libpcap::PCAP_ERROR_ACTIVATED => Err(Error::AlreadyActivated),
-        n => Err(Error::PcapErrorCode(n)),
-    }
+    check_pcap_error(pcap_t, ret)
 }
 
 pub fn pcap_set_snaplen(pcap_t: &PcapT, snaplen: usize) -> Result<()> {
     trace!("pcap_set_snaplen({:p}, {})", pcap_t.pcap_t, snaplen);
     let ret = unsafe { libpcap::pcap_set_snaplen(pcap_t.pcap_t, snaplen as libc::c_int) };
-    match ret {
-        0 => Ok(()),
-        libpcap::PCAP_ERROR_ACTIVATED => Err(Error::AlreadyActivated),
-        n => Err(Error::PcapErrorCode(n)),
-    }
+    check_pcap_error(pcap_t, ret)
 }
 
 pub fn pcap_set_immediate_mode(pcap_t: &PcapT, immediate: bool) -> Result<()> {
@@ -77,21 +70,22 @@ pub fn pcap_set_immediate_mode(pcap_t: &PcapT, immediate: bool) -> Result<()> {
     );
     let immediate = if immediate { 1 } else { 0 };
     let ret = unsafe { libpcap::pcap_set_immediate_mode(pcap_t.pcap_t, immediate) };
-    match ret {
-        0 => Ok(()),
-        libpcap::PCAP_ERROR_ACTIVATED => Err(Error::AlreadyActivated),
-        n => Err(Error::PcapErrorCode(n)),
-    }
+    check_pcap_error(pcap_t, ret)
 }
 
 pub fn pcap_activate(pcap_t: &PcapT) -> Result<()> {
     trace!("pcap_activate({:p})", pcap_t.pcap_t);
     let ret = unsafe { libpcap::pcap_activate(pcap_t.pcap_t) };
-    match ret {
-        0 => Ok(()),
-        -1 => Err(get_error(pcap_t)?),
-        n => Err(Error::PcapWarning(status_to_str(n)?)),
+    check_pcap_error(pcap_t, ret)?;
+
+    // pcap_activate() returns 0 on success without warnings, a non-zero
+    // positive value on success with warnings, and a negative value on error. A
+    // non-zero return value indicates what warning or error condition occurred.
+    if ret > 0 {
+        return Err(Error::PcapWarning(status_to_str(ret)?));
     }
+
+    Ok(())
 }
 
 pub fn get_error(pcap_t: &PcapT) -> Result<Error> {
@@ -104,11 +98,7 @@ pub fn get_error(pcap_t: &PcapT) -> Result<Error> {
 
 pub fn pcap_stats(pcap_t: &PcapT, stat: &mut PcapStat) -> Result<()> {
     let ret = unsafe { libpcap::pcap_stats(pcap_t.pcap_t, &mut stat.stats) };
-    match ret {
-        0 => Ok(()),
-        -1 => Err(get_error(pcap_t)?),
-        n => Err(Error::PcapWarning(status_to_str(n)?)),
-    }
+    check_pcap_error(pcap_t, ret)
 }
 
 pub fn pcap_inject(pcap_t: &PcapT, buf: &[u8]) -> Result<usize> {
@@ -120,9 +110,8 @@ pub fn pcap_inject(pcap_t: &PcapT, buf: &[u8]) -> Result<usize> {
     );
     let ret =
         unsafe { libpcap::pcap_inject(pcap_t.pcap_t, buf.as_ptr() as *const c_void, buf.len()) };
-    if ret < 0 {
-        return Err(get_error(pcap_t)?);
-    }
+
+    check_pcap_error(pcap_t, ret)?;
     Ok(ret as usize)
 }
 
@@ -142,9 +131,8 @@ pub fn pcap_compile(pcap_t: &PcapT, filter: &str) -> Result<PcapFilter> {
             netmask,
         )
     };
-    if ret == -1 {
-        return Err(get_error(pcap_t)?);
-    }
+
+    check_pcap_error(pcap_t, ret)?;
     Ok(PcapFilter { bpf_program })
 }
 
@@ -154,11 +142,9 @@ pub fn pcap_setfilter(pcap_t: &PcapT, pcap_filter: &mut PcapFilter) -> Result<()
         pcap_t.pcap_t,
         &pcap_filter.bpf_program
     );
+
     let ret = unsafe { libpcap::pcap_setfilter(pcap_t.pcap_t, &mut pcap_filter.bpf_program) };
-    if ret == -1 {
-        return Err(get_error(pcap_t)?);
-    }
-    Ok(())
+    check_pcap_error(pcap_t, ret)
 }
 
 pub fn pcap_freecode(pcap_filter: &mut PcapFilter) {
@@ -174,11 +160,14 @@ pub fn pcap_next_ex<'p>(pcap_t: &PcapT) -> Result<Packet<'p>> {
     let mut packet: *const libc::c_uchar = std::ptr::null();
 
     let ret = unsafe { libpcap::pcap_next_ex(pcap_t.pcap_t, &mut header, &mut packet) };
+    check_pcap_error(pcap_t, ret)?;
+
+    // pcap_next_ex() returns 1 if the packet was read without problems, 0 if
+    // packets are being read from a live capture and the packet buffer timeout
+    // expired.
     match ret {
         1 => (),
         0 => return Err(Error::Timeout),
-        -1 => return Err(get_error(pcap_t)?),
-        -2 => return Err(Error::NoMorePackets),
         n => return Err(Error::PcapErrorCode(n)),
     }
 
@@ -200,15 +189,18 @@ pub fn pcap_findalldevs() -> Result<PcapIfT> {
         libpcap::pcap_findalldevs(&mut pcap_if_t, errbuf.as_mut_ptr() as *mut libc::c_char)
     };
 
-    if ret == -1 {
-        let cstr = unsafe { CStr::from_ptr(errbuf.as_ptr() as *const libc::c_char) };
-        let err = cstr.to_str()?.to_owned();
-        return Err(Error::PcapError(err));
+    match ret {
+        PCAP_SUCCESS => {
+            trace!("pcap_findalldevs() => {:p}", pcap_if_t);
+            Ok(PcapIfT { pcap_if_t })
+        }
+        PCAP_ERROR => {
+            let cstr = unsafe { CStr::from_ptr(errbuf.as_ptr() as *const libc::c_char) };
+            let err = cstr.to_str()?.to_owned();
+            Err(Error::PcapError(err))
+        }
+        n => Err(Error::PcapErrorCode(n)),
     }
-
-    trace!("pcap_findalldevs() => {:p}", pcap_if_t);
-
-    Ok(PcapIfT { pcap_if_t })
 }
 
 pub fn pcap_freealldevs(pcap_if_t: &mut PcapIfT) {
@@ -378,6 +370,28 @@ fn status_to_str(error: libc::c_int) -> Result<String> {
     let cstr = unsafe { CStr::from_ptr(ptr) };
     let status = cstr.to_str()?.to_owned();
     Ok(status)
+}
+
+/// Check for `libpcap` error.
+fn check_pcap_error(pcap_t: &PcapT, ret: i32) -> Result<()> {
+    trace!("check_pcap_error({:p}, {})", pcap_t, ret);
+    match ret {
+        PCAP_SUCCESS => Ok(()),
+        PCAP_ERROR => Err(get_error(pcap_t)?),
+        libpcap::PCAP_ERROR_BREAK => Err(Error::Break),
+        libpcap::PCAP_ERROR_NOT_ACTIVATED => Err(Error::NotActivated),
+        libpcap::PCAP_ERROR_ACTIVATED => Err(Error::AlreadyActivated),
+        libpcap::PCAP_ERROR_NO_SUCH_DEVICE => Err(Error::NoSuchDevice),
+        libpcap::PCAP_ERROR_RFMON_NOTSUP => Err(Error::MonitorModeNotSupported),
+        libpcap::PCAP_ERROR_NOT_RFMON => Err(Error::OnlySupportedInMonitorMode),
+        libpcap::PCAP_ERROR_PERM_DENIED => Err(Error::PermissionDenied),
+        libpcap::PCAP_ERROR_IFACE_NOT_UP => Err(Error::InterfaceNotUp),
+        libpcap::PCAP_ERROR_CANTSET_TSTAMP_TYPE => Err(Error::TimestampTypeNotSupported),
+        libpcap::PCAP_ERROR_PROMISC_PERM_DENIED => Err(Error::PromiscuousPermissionDenied),
+        libpcap::PCAP_ERROR_TSTAMP_PRECISION_NOTSUP => Err(Error::TimestampPrecisionNotSupported),
+        n if n < 0 => Err(Error::PcapErrorCode(n)),
+        _ => Ok(()),
+    }
 }
 
 #[cfg(test)]
