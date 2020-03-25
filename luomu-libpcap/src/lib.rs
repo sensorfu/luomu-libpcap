@@ -87,8 +87,6 @@ impl Drop for PcapT {
 /// packets.
 pub struct Pcap {
     pcap_t: PcapT,
-    #[allow(dead_code)]
-    pcap_filter: Option<PcapFilter>,
 }
 
 impl Pcap {
@@ -98,11 +96,7 @@ impl Pcap {
     /// network. `source` is a string that specifies the network device to open.
     pub fn new(source: &str) -> Result<Pcap> {
         let pcap_t = pcap_create(source)?;
-        let pcap_filter = None;
-        Ok(Pcap {
-            pcap_t,
-            pcap_filter,
-        })
+        Ok(Pcap { pcap_t })
     }
 
     /// Use builder to create a live capture handle
@@ -111,11 +105,17 @@ impl Pcap {
     /// network. source is a string that specifies the network device to open.
     pub fn builder(source: &str) -> Result<PcapBuilder> {
         let pcap_t = pcap_create(source)?;
-        let pcap_filter = None;
-        Ok(PcapBuilder {
-            pcap_t,
-            pcap_filter,
-        })
+        Ok(PcapBuilder { pcap_t })
+    }
+
+    /// set a filter expression
+    ///
+    /// `Set a filter for capture. See
+    /// [pcap-filter(7)](https://www.tcpdump.org/manpages/pcap-filter.7.html)
+    /// for the syntax of that string.
+    pub fn set_filter(&self, filter: &str) -> Result<()> {
+        let mut bpf_program = PcapFilter::compile(&self.pcap_t, filter)?;
+        pcap_setfilter(&self.pcap_t, &mut bpf_program)
     }
 
     /// Start capturing packets
@@ -163,7 +163,6 @@ impl Deref for Pcap {
 /// Builder for a `Pcap`. Call `Pcap::builder()` to get started.
 pub struct PcapBuilder {
     pcap_t: PcapT,
-    pcap_filter: Option<String>,
 }
 
 impl PcapBuilder {
@@ -196,16 +195,6 @@ impl PcapBuilder {
         Ok(self)
     }
 
-    /// set a filter expression
-    ///
-    /// `Set a filter for capture. See
-    /// [pcap-filter(7)](https://www.tcpdump.org/manpages/pcap-filter.7.html)
-    /// for the syntax of that string.
-    pub fn set_filter(mut self, filter_str: &str) -> Result<PcapBuilder> {
-        self.pcap_filter = Some(filter_str.to_owned());
-        Ok(self)
-    }
-
     /// set the snapshot length for a capture
     ///
     /// `set_snaplen()` sets the snapshot length to be used on a capture handle
@@ -224,19 +213,8 @@ impl PcapBuilder {
     /// effect.
     pub fn activate(self) -> Result<Pcap> {
         pcap_activate(&self.pcap_t)?;
-
-        let pcap_filter = match self.pcap_filter {
-            Some(filter) => {
-                let mut pcap_filter = pcap_compile(&self.pcap_t, &filter)?;
-                pcap_setfilter(&self.pcap_t, &mut pcap_filter)?;
-                Some(pcap_filter)
-            }
-            None => None,
-        };
-
         Ok(Pcap {
             pcap_t: self.pcap_t,
-            pcap_filter,
         })
     }
 }
