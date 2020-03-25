@@ -6,10 +6,11 @@ fn main() -> Result<()> {
     let pcap = Pcap::builder("en0")?
         .set_promiscuous(true)?
         .set_immediate(true)?
-        .set_filter("udp")?
         .set_snaplen(65535)?
         .set_buffer_size(512 * 1024)?
         .activate()?;
+
+    pcap.set_filter("udp")?;
 
     let mut count = 0;
     for packet in pcap.capture() {
