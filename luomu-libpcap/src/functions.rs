@@ -133,7 +133,7 @@ pub fn pcap_set_immediate_mode(pcap_t: &PcapT, immediate: bool) -> Result<()> {
 /// milliseconds.
 ///
 /// <https://www.tcpdump.org/manpages/pcap_set_timeout.3pcap.html>
-pub fn pcap_set_timeout(pcap_t: &PcapT, to_ms: usize) -> Result<()> {
+pub fn pcap_set_timeout(pcap_t: &PcapT, to_ms: i32) -> Result<()> {
     trace!("pcap_set_timeout({:p}, {})", pcap_t.pcap_t, to_ms);
     let ret = unsafe { libpcap::pcap_set_timeout(pcap_t.pcap_t, to_ms as libc::c_int) };
     check_pcap_error(pcap_t, ret)
