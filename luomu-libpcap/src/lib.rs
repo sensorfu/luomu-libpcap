@@ -35,7 +35,7 @@ use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::ops::Deref;
 use std::result;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
 use luomu_libpcap_sys as libpcap;
 
@@ -200,8 +200,11 @@ impl PcapBuilder {
     /// `pcap_set_timeout()` sets the packet buffer timeout that will be used on a
     /// capture handle when the handle is activated to to_ms, which is in units of
     /// milliseconds.
-    pub fn set_timeout(self, to_ms: usize) -> Result<PcapBuilder> {
-        pcap_set_timeout(&self.pcap_t, to_ms)?;
+    pub fn set_timeout(self, to_ms: Duration) -> Result<PcapBuilder> {
+        pcap_set_timeout(
+            &self.pcap_t,
+            (to_ms.as_millis().min(std::i32::MAX as u128)) as i32,
+        )?;
         Ok(self)
     }
 
