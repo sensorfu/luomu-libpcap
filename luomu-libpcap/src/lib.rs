@@ -34,8 +34,8 @@ use std::default;
 use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::ops::Deref;
-use std::rc::Rc;
 use std::result;
+use std::time::SystemTime;
 
 use luomu_libpcap_sys as libpcap;
 
@@ -242,7 +242,7 @@ impl Drop for PcapFilter {
     }
 }
 
-/// Pcap cature iterator
+/// Pcap capture iterator
 pub struct PcapIter<'p> {
     pcap_t: &'p PcapT,
 }
@@ -254,7 +254,7 @@ impl<'p> PcapIter<'p> {
 }
 
 impl<'p> Iterator for PcapIter<'p> {
-    type Item = Packet<'p>;
+    type Item = Packet;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -310,54 +310,29 @@ impl PcapStat {
 }
 
 /// A network packet captured by libpcap.
-pub enum Packet<'p> {
-    /// Borrowed content is wrapped into `Rc` to advice compiler that `Packet`
-    /// is not `Sync` nor `Send`. This is done because `libpcap` owns the
-    /// borrowed memory and next call to `pcap_next_ex` could change the
-    /// contents.
-    Borrowed(Rc<&'p [u8]>),
-    /// Owned version of the packet. The contents have been explicitely copied
-    /// so it's safe to call `pcap_next_ex()` again.
-    Owned(Vec<u8>),
+///
+/// This struct contains memory owned by `libpcap`. Copy the contents out before
+/// getting next `Packet` from `libpcap`.
+pub struct Packet {
+    timestamp: SystemTime,
+    ptr: *const libc::c_uchar,
+    len: usize,
 }
 
-impl<'p> Packet<'p> {
-    /// Make `Packet` from slice
-    pub fn from_slice(buf: &'p [u8]) -> Packet<'p> {
-        Packet::Borrowed(Rc::new(buf))
+impl Packet {
+    /// get a timestamp of a packet
+    ///
+    /// When capturing traffic, each packet is given a timestamp representing
+    /// the arrival time of the packet. This time is an approximation.
+    ///
+    /// <https://www.tcpdump.org/manpages/pcap-tstamp.7.html>
+    pub fn timestamp(&self) -> SystemTime {
+        self.timestamp
     }
 
-    /// Clone the packet
-    pub fn to_vec(&self) -> Vec<u8> {
-        match self {
-            Packet::Borrowed(packet) => packet.to_vec(),
-            Packet::Owned(packet) => packet.clone(),
-        }
-    }
-}
-
-impl<'p> ToOwned for Packet<'p> {
-    type Owned = Packet<'p>;
-
-    fn to_owned(&self) -> Self {
-        Packet::Owned(self.to_vec())
-    }
-}
-
-impl<'p> AsRef<[u8]> for Packet<'p> {
-    fn as_ref(&self) -> &[u8] {
-        self.deref()
-    }
-}
-
-impl<'p> Deref for Packet<'p> {
-    type Target = [u8];
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            Packet::Borrowed(packet) => packet,
-            Packet::Owned(packet) => packet.as_ref(),
-        }
+    /// Get the contents of a packet
+    pub fn packet(&self) -> &[u8] {
+        unsafe { std::slice::from_raw_parts(self.ptr, self.len) }
     }
 }
 
@@ -815,22 +790,5 @@ impl std::ops::Deref for MacAddr {
     type Target = [u8; 6];
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::Packet;
-
-    #[test]
-    fn test_packet_to_owned() {
-        let buf = vec![1, 2, 3, 4];
-        let packet = Packet::from_slice(&buf);
-        let owned = packet.to_owned();
-        if let Packet::Owned(p) = owned {
-            assert_eq!(p, buf);
-        } else {
-            panic!("Packet was not owned");
-        }
     }
 }

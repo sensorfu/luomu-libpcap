@@ -16,7 +16,7 @@ use std::collections::BTreeSet;
 use std::ffi::{c_void, CStr, CString};
 use std::mem::MaybeUninit;
 use std::net::{Ipv4Addr, Ipv6Addr};
-use std::rc::Rc;
+use std::time::{Duration, UNIX_EPOCH};
 
 use log::trace;
 
@@ -272,7 +272,7 @@ pub fn pcap_freecode(pcap_filter: PcapFilter) {
 /// If data is needed, copy it before calling this again.
 ///
 /// <https://www.tcpdump.org/manpages/pcap_next_ex.3pcap.html>
-pub fn pcap_next_ex<'p>(pcap_t: &PcapT) -> Result<Packet<'p>> {
+pub fn pcap_next_ex(pcap_t: &PcapT) -> Result<Packet> {
     trace!("pcap_next_ex({:p})", pcap_t.pcap_t);
     let mut header: *mut libpcap::pcap_pkthdr = std::ptr::null_mut();
     let mut packet: *const libc::c_uchar = std::ptr::null();
@@ -293,10 +293,16 @@ pub fn pcap_next_ex<'p>(pcap_t: &PcapT) -> Result<Packet<'p>> {
         panic!("header or packet NULL.");
     }
 
+    let ts: libc::timeval = unsafe { (*header).ts } as libc::timeval;
     let len: usize = unsafe { (*header).caplen } as usize;
-    let raw = unsafe { std::slice::from_raw_parts(packet, len) };
 
-    Ok(Packet::Borrowed(Rc::new(raw)))
+    let timestamp = UNIX_EPOCH + Duration::new(ts.tv_sec as u64, (ts.tv_usec as u32) * 1000);
+
+    Ok(Packet {
+        timestamp,
+        ptr: packet,
+        len,
+    })
 }
 
 /// get a list of capture devices
