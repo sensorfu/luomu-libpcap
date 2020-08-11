@@ -126,6 +126,19 @@ pub fn pcap_set_immediate_mode(pcap_t: &PcapT, immediate: bool) -> Result<()> {
     check_pcap_error(pcap_t, ret)
 }
 
+/// set the packet buffer timeout for a not-yet-activated capture handle
+///
+/// `pcap_set_timeout()` sets the packet buffer timeout that will be used on a
+/// capture handle when the handle is activated to to_ms, which is in units of
+/// milliseconds.
+///
+/// <https://www.tcpdump.org/manpages/pcap_set_timeout.3pcap.html>
+pub fn pcap_set_timeout(pcap_t: &PcapT, to_ms: usize) -> Result<()> {
+    trace!("pcap_set_timeout({:p}, {})", pcap_t.pcap_t, to_ms);
+    let ret = unsafe { libpcap::pcap_set_timeout(pcap_t.pcap_t, to_ms as libc::c_int) };
+    check_pcap_error(pcap_t, ret)
+}
+
 /// activate a capture handle
 ///
 /// `pcap_activate()` is used to activate a packet capture handle to look at

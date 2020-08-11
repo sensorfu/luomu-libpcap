@@ -195,6 +195,16 @@ impl PcapBuilder {
         Ok(self)
     }
 
+    /// set packet buffer timeout for a capture
+    ///
+    /// `pcap_set_timeout()` sets the packet buffer timeout that will be used on a
+    /// capture handle when the handle is activated to to_ms, which is in units of
+    /// milliseconds.
+    pub fn set_timeout(self, to_ms: usize) -> Result<PcapBuilder> {
+        pcap_set_timeout(&self.pcap_t, to_ms)?;
+        Ok(self)
+    }
+
     /// set the snapshot length for a capture
     ///
     /// `set_snaplen()` sets the snapshot length to be used on a capture handle
