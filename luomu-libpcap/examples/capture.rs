@@ -14,6 +14,7 @@ fn main() -> Result<()> {
 
     let mut count = 0;
     for packet in pcap.capture() {
+        let packet = packet.packet();
         let mut hex = String::new();
         for i in 0..packet.len() {
             if i % 4 == 0 {
