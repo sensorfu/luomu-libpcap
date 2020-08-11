@@ -293,11 +293,10 @@ pub fn pcap_next_ex<'p>(pcap_t: &PcapT) -> Result<Packet<'p>> {
         panic!("header or packet NULL.");
     }
 
-    let ts: libc::timeval = unsafe { (*header).ts } as libc::timeval;
     let len: usize = unsafe { (*header).caplen } as usize;
     let raw = unsafe { std::slice::from_raw_parts(packet, len) };
 
-    Ok(Packet::Borrowed { timestamp: ts, packet: Rc::new(raw) })
+    Ok(Packet::Borrowed(Rc::new(raw)))
 }
 
 /// get a list of capture devices

@@ -315,41 +315,23 @@ pub enum Packet<'p> {
     /// is not `Sync` nor `Send`. This is done because `libpcap` owns the
     /// borrowed memory and next call to `pcap_next_ex` could change the
     /// contents.
-    Borrowed {
-        /// Arrival time of the packet
-        timestamp: libc::timeval,
-        /// Packet contents
-        packet: Rc<&'p [u8]>
-    },
+    Borrowed(Rc<&'p [u8]>),
     /// Owned version of the packet. The contents have been explicitely copied
     /// so it's safe to call `pcap_next_ex()` again.
-    Owned {
-        /// Arrival time of the packet
-        timestamp: libc::timeval,
-        /// Packet contents
-        packet: Vec<u8>
-    },
+    Owned(Vec<u8>),
 }
 
 impl<'p> Packet<'p> {
-    /// Get a timestamp of a packet
-    ///
-    /// When capturing traffic, each packet is given a time stamp representing
-    /// the arrival time of the packet. This time is an approximation.
-    ///
-    /// <https://www.tcpdump.org/manpages/pcap-tstamp.7.html>
-    pub fn timestamp(&self) -> libc::timeval {
-        match self {
-            Packet::Borrowed { timestamp, packet: _ } => *timestamp,
-            Packet::Owned { timestamp, packet: _ } => *timestamp,
-        }
+    /// Make `Packet` from slice
+    pub fn from_slice(buf: &'p [u8]) -> Packet<'p> {
+        Packet::Borrowed(Rc::new(buf))
     }
 
     /// Clone the packet
     pub fn to_vec(&self) -> Vec<u8> {
         match self {
-            Packet::Borrowed { timestamp: _, packet } => packet.to_vec(),
-            Packet::Owned { timestamp: _, packet } => packet.clone(),
+            Packet::Borrowed(packet) => packet.to_vec(),
+            Packet::Owned(packet) => packet.clone(),
         }
     }
 }
@@ -358,7 +340,7 @@ impl<'p> ToOwned for Packet<'p> {
     type Owned = Packet<'p>;
 
     fn to_owned(&self) -> Self {
-        Packet::Owned { timestamp: self.timestamp(), packet: self.to_vec() }
+        Packet::Owned(self.to_vec())
     }
 }
 
@@ -373,8 +355,8 @@ impl<'p> Deref for Packet<'p> {
 
     fn deref(&self) -> &Self::Target {
         match self {
-            Packet::Borrowed { timestamp: _, packet } => packet,
-            Packet::Owned { timestamp: _, packet } => packet.as_ref(),
+            Packet::Borrowed(packet) => packet,
+            Packet::Owned(packet) => packet.as_ref(),
         }
     }
 }
@@ -839,16 +821,14 @@ impl std::ops::Deref for MacAddr {
 #[cfg(test)]
 mod tests {
     use super::Packet;
-    use std::rc::Rc;
 
     #[test]
     fn test_packet_to_owned() {
         let buf = vec![1, 2, 3, 4];
-        let timestamp = libc::timeval { tv_sec: 0, tv_usec: 0 };
-        let packet = Packet::Borrowed { timestamp, packet: Rc::new(&buf) };
+        let packet = Packet::from_slice(&buf);
         let owned = packet.to_owned();
-        if let Packet::Owned { timestamp: _, packet } = owned {
-            assert_eq!(packet, buf);
+        if let Packet::Owned(p) = owned {
+            assert_eq!(p, buf);
         } else {
             panic!("Packet was not owned");
         }
