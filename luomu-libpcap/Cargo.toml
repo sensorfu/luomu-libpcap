@@ -22,4 +22,4 @@ log = { version = "0.4", default-features = false }
 luomu-libpcap-sys = { path = "../luomu-libpcap-sys" }
 
 [dev-dependencies]
-env_logger = {version = "0.6", default-features = false }
+env_logger = {version = "0.7", default-features = false }
