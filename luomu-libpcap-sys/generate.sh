@@ -21,6 +21,7 @@ bindgen \
     --blacklist-type='^__.*' \
     --blacklist-type='^sa_.*' \
     --blacklist-type='^sockaddr' \
+    --blacklist-type='^size_t' \
     --blacklist-type='^timeval' \
     --blacklist-type='FILE' \
     --blacklist-type='fpos_t' \
