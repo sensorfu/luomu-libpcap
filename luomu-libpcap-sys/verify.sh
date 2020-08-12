@@ -5,5 +5,5 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-gpg --receive-keys E089DEF1D9C15D0D
+gpg --import signing-key.asc
 gpg --verify "$1.sig"
