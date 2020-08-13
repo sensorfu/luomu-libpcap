@@ -217,7 +217,7 @@ pub fn pcap_inject(pcap_t: &PcapT, buf: &[u8]) -> Result<usize> {
 /// [pcap-filter(7)](https://www.tcpdump.org/manpages/pcap-filter.7.html) for
 /// the syntax of that string.
 ///
-/// Optimization of the filter is not performed and by default.
+/// Optimization of the filter turned on by default.
 ///
 /// C library's `pcap_compile()` supports specifying IPv4 netmask, but we use
 /// `PCAP_NETMASK_UNKNOWN` by default.
@@ -227,7 +227,7 @@ pub fn pcap_compile(pcap_t: &PcapT, filter: &str) -> Result<PcapFilter> {
     trace!("pcap_compile({:p}, {})", pcap_t.pcap_t, filter);
     let mut bpf_program: MaybeUninit<libpcap::bpf_program> = MaybeUninit::zeroed();
     let filter = CString::new(filter)?;
-    let optimize = 0;
+    let optimize = 1;
     let netmask = libpcap::PCAP_NETMASK_UNKNOWN;
 
     let ret = unsafe {
