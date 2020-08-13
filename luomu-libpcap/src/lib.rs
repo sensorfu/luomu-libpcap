@@ -343,9 +343,21 @@ impl Packet {
         self.timestamp
     }
 
-    /// Get the contents of a packet
+    /// Get the contents of a packet.
     pub fn packet(&self) -> &[u8] {
         unsafe { std::slice::from_raw_parts(self.ptr, self.len) }
+    }
+
+    /// Length of captured packet.
+    ///
+    /// Packet should always have some bytes so length is never zero.
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    /// The packet is never empty. But you might want to make sure.
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
     }
 }
 
