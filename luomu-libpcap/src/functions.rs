@@ -193,8 +193,7 @@ pub fn pcap_stats(pcap_t: &PcapT, stat: &mut PcapStat) -> Result<()> {
 /// transmit a packet
 ///
 /// `pcap_inject()` sends a raw packet through the network interface; buf points
-/// to the data of the packet, including the link-layer header, and size is the
-/// number of bytes in the packet.
+/// to the data of the packet, including the link-layer header.
 ///
 /// <https://www.tcpdump.org/manpages/pcap_inject.3pcap.html>
 pub fn pcap_inject(pcap_t: &PcapT, buf: &[u8]) -> Result<usize> {
