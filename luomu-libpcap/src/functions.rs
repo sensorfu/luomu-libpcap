@@ -196,6 +196,8 @@ pub fn pcap_stats(pcap_t: &PcapT, stat: &mut PcapStat) -> Result<()> {
 /// to the data of the packet, including the link-layer header, and size is the
 /// number of bytes in the packet.
 ///
+/// `pcap_inject()` returns the number of bytes written on success.
+///
 /// <https://www.tcpdump.org/manpages/pcap_inject.3pcap.html>
 pub fn pcap_inject(pcap_t: &PcapT, buf: &[u8]) -> Result<usize> {
     trace!(
@@ -207,7 +209,10 @@ pub fn pcap_inject(pcap_t: &PcapT, buf: &[u8]) -> Result<usize> {
     let ret =
         unsafe { libpcap::pcap_inject(pcap_t.pcap_t, buf.as_ptr() as *const c_void, buf.len()) };
 
-    check_pcap_error(pcap_t, ret)?;
+    if ret < 0 {
+        check_pcap_error(pcap_t, ret)?;
+    }
+
     Ok(ret as usize)
 }
 
