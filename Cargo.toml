@@ -1,5 +1,6 @@
 [workspace]
 members = [
+	"luomu-common",
 	"luomu-libpcap",
 	"luomu-libpcap-sys",
 ]
