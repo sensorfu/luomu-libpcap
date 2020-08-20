@@ -112,7 +112,7 @@ mod linux {
                     .short("i")
                     .long("interface")
                     .takes_value(true)
-                    .default_value("br0")
+                    .required(true)
                     .help("Name of the capture interface"),
             )
             .arg(
