@@ -1,0 +1,24 @@
+[package]
+name = "luomu-tpacketv3"
+version = "0.1.0"
+authors = ["Jukka Taimisto <jtaimisto@gmail.com>"]
+edition = "2018"
+license = "MIT"
+
+description = "Rust bindings for packet capture using AF_PACKET and tpacketv3 on linux"
+homepage = "https://github.com/sensorfu/luomu-libpcap#readme"
+repository = "https://github.com/sensorfu/luomu-libpcap"
+documentation = "https://docs.rs/luomu-libpcap/"
+readme = "README.md"
+keywords = [ "af_packet", "network" ]
+categories = [ "api-bindings", "network-programming" ]
+
+
+[dependencies]
+libc = "^0.2"
+log = "^0.4"
+
+[dev-dependencies]
+env_logger = "^0.7"
+clap = {version="~2.27.0", default-features = false }
+
