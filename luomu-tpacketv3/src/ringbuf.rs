@@ -47,7 +47,6 @@ impl<'a> From<*mut u8> for PacketDescriptor<'a> {
 pub struct BlockDescriptor<'a> {
     ptr: *mut u8,                                // pointer to the start of the data
     desc: &'a mut if_packet::tpacket_block_desc, // the actual block descriptor
-    name: String,
 }
 
 unsafe impl Send for BlockDescriptor<'_> {}
@@ -76,7 +75,6 @@ impl<'a> From<*mut u8> for BlockDescriptor<'a> {
         let desc_ptr = ptr as *mut if_packet::tpacket_block_desc;
 
         BlockDescriptor {
-            name: format!("block@{:?}", ptr),
             ptr,
             desc: unsafe { desc_ptr.as_mut().unwrap() },
         }
@@ -87,8 +85,8 @@ impl fmt::Display for BlockDescriptor<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{} ready:{}, num_packets: {}",
-            self.name,
+            "block@{:?} ready:{}, num_packets: {}",
+            self.ptr,
             self.is_ready(),
             self.get_number_of_packets()
         )
