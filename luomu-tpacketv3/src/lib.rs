@@ -193,7 +193,7 @@ pub fn reader<'a>(interface: &str, parameters: ReaderParameters) -> Result<Reade
 }
 
 /// Error returned by `Reader::wait_block()` to indicate that no packets
-/// arae available at this time.
+/// are available at this time.
 #[derive(Debug)]
 pub enum WaitError {
     /// Timed out waiting for block to be ready. Try again.
