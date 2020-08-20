@@ -41,8 +41,6 @@ pub enum Error {
     /// Unknown error code from `libpcap`.
     PcapErrorCode(i32),
 
-    /// Invalid address
-    InvalidAddress,
     /// Timeout happened (maybe during live capture)
     Timeout,
     /// Error from Rust <-> C String conversion
@@ -70,7 +68,6 @@ impl fmt::Display for Error {
             Error::PcapWarning(warn) => write!(f, "libpcap warning: {}", warn),
             Error::PcapErrorCode(code) => write!(f, "libpcap unknown error code: {}", code),
 
-            Error::InvalidAddress => write!(f, "invalid address"),
             Error::Timeout => write!(f, "timeout"),
             Error::CStringError(err) => err.fmt(f),
         }

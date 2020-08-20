@@ -19,6 +19,7 @@ circle-ci = { repository = "sensorfu/luomu-libpcap", branch = "master" }
 [dependencies]
 libc = { version = "0.2", default-features = false }
 log = { version = "0.4", default-features = false }
+luomu-common = { path = "../luomu-common" }
 luomu-libpcap-sys = { path = "../luomu-libpcap-sys" }
 
 [dev-dependencies]
