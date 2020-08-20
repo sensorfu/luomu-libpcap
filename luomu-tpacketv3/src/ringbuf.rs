@@ -23,7 +23,6 @@ impl<'a> PacketDescriptor<'a> {
         UNIX_EPOCH + Duration::new(self.hdr.tp_sec as u64, self.hdr.tp_nsec)
     }
 
-    /// Copies packet data from buffer into a vector.
     pub fn get_packet_data(&self) -> &'a [u8] {
         let data_ptr = unsafe { self.ptr.offset(self.hdr.tp_mac as isize) };
         unsafe { std::slice::from_raw_parts(data_ptr, self.hdr.tp_snaplen as usize) }
