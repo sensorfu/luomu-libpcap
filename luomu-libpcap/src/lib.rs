@@ -114,7 +114,7 @@ impl Pcap {
     /// [pcap-filter(7)](https://www.tcpdump.org/manpages/pcap-filter.7.html)
     /// for the syntax of that string.
     pub fn set_filter(&self, filter: &str) -> Result<()> {
-        let mut bpf_program = PcapFilter::compile(&self.pcap_t, filter)?;
+        let mut bpf_program = PcapFilter::compile_with_pcap_t(&self.pcap_t, filter)?;
         pcap_setfilter(&self.pcap_t, &mut bpf_program)
     }
 
@@ -243,7 +243,18 @@ impl PcapFilter {
     /// `compile()` is used to compile the filter into a filter program. See
     /// [pcap-filter(7)](https://www.tcpdump.org/manpages/pcap-filter.7.html)
     /// for the syntax of that string.
-    pub fn compile(pcap_t: &PcapT, filter_str: &str) -> Result<PcapFilter> {
+    pub fn compile(filter: &str) -> Result<PcapFilter> {
+        let pcap = pcap_open_dead()?;
+        pcap_compile(&pcap, filter)
+    }
+
+    /// compile a filter expression with `PcapT`
+    ///
+    /// `compile_with_pcap_t()` is used to compile the filter into a filter
+    /// program. See
+    /// [pcap-filter(7)](https://www.tcpdump.org/manpages/pcap-filter.7.html)
+    /// for the syntax of that string.
+    pub fn compile_with_pcap_t(pcap_t: &PcapT, filter_str: &str) -> Result<PcapFilter> {
         pcap_compile(pcap_t, filter_str)
     }
 }

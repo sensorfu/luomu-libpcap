@@ -322,6 +322,26 @@ pub fn pcap_next_ex(pcap_t: &PcapT) -> Result<Packet> {
     })
 }
 
+/// open a fake `PcapT` for compiling filters
+///
+/// `pcap_open_dead()` is used for creating a `PcapT` structure to use when
+/// calling the other functions in libpcap. It is typically used when just using
+/// libpcap for compiling BPF code.
+///
+/// This function defaults to opening `LINKTYPE_ETHERNET` (IEEE 802.3 Ethernet
+/// (10Mb, 100Mb, 1000Mb, and up)) link-layer with snapshot length of 65535.
+///
+/// <https://www.tcpdump.org/manpages/pcap_open_dead.3pcap.html>
+pub fn pcap_open_dead() -> Result<PcapT> {
+    let pcap_t = unsafe { libpcap::pcap_open_dead(libpcap::dlt::DLT_EN10MB as libc::c_int, 65535) };
+
+    // pcap_open_dead return value is not documented.
+    debug_assert!(!pcap_t.is_null(), "Can pcap_open_dead() fail?");
+
+    let errbuf: Vec<u8> = vec![0; libpcap::PCAP_ERRBUF_SIZE as usize];
+    Ok(PcapT { pcap_t, errbuf })
+}
+
 /// get a list of capture devices
 ///
 /// `pcap_findalldevs()` constructs a list of network devices that can be opened
