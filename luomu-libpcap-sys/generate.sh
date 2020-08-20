@@ -1,7 +1,6 @@
 #!/bin/sh -e
 
 LIBPCAP='libpcap-1.9.1'
-OUT='src/bindings.rs'
 
 ./verify.sh "${LIBPCAP}.tar.gz"
 
@@ -9,6 +8,7 @@ DEST=$(mktemp -d)
 mkdir -p "${DEST}"
 
 gunzip -c "${LIBPCAP}.tar.gz" | tar xf - -C "${DEST}"
+
 bindgen \
     "${DEST}/${LIBPCAP}/pcap/pcap.h" \
     --no-include-path-detection \
@@ -25,8 +25,18 @@ bindgen \
     --blacklist-type='^timeval' \
     --blacklist-type='FILE' \
     --blacklist-type='fpos_t' \
+    --blacklist-type='size_t' \
     --blacklist-type='u_.*' \
-    -o ${OUT} \
+    -o src/pcap.rs \
+    -- \
+    -I"${DEST}/${LIBPCAP}"
+
+bindgen \
+    "${DEST}/${LIBPCAP}/pcap/dlt.h" \
+    --no-include-path-detection \
+    --distrust-clang-mangling \
+    --use-core \
+    -o src/dlt.rs \
     -- \
     -I"${DEST}/${LIBPCAP}"
 

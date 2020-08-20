@@ -8,4 +8,6 @@ use libc::c_uchar as u_char;
 use libc::c_uint as u_int;
 use libc::c_ushort as u_short;
 
-include!("bindings.rs");
+pub mod dlt;
+
+include!("pcap.rs");
