@@ -13,8 +13,22 @@
 //!
 //! Common types and functions for (low) level network programming.
 
+use std::fmt;
+
 mod address;
-pub use address::{Address, InvalidAddress};
+pub use address::Address;
 
 mod macaddr;
 pub use macaddr::MacAddr;
+
+/// Invalid address error
+#[derive(Debug)]
+pub struct InvalidAddress;
+
+impl std::error::Error for InvalidAddress {}
+
+impl fmt::Display for InvalidAddress {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("invalid address")
+    }
+}

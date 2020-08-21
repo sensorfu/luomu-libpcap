@@ -1,8 +1,7 @@
 use std::convert::TryFrom;
-use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
-use super::MacAddr;
+use super::{InvalidAddress, MacAddr};
 
 /// Address of some sort. IPv4, IPv6, MAC.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -194,17 +193,5 @@ impl TryFrom<Address> for MacAddr {
             Address::Mac(mac) => Ok(mac),
             _ => Err(InvalidAddress),
         }
-    }
-}
-
-/// Invalid address error
-#[derive(Debug)]
-pub struct InvalidAddress;
-
-impl std::error::Error for InvalidAddress {}
-
-impl fmt::Display for InvalidAddress {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("invalid address")
     }
 }
