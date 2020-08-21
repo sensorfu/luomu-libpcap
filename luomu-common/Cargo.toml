@@ -12,3 +12,6 @@ documentation = "https://docs.rs/luomu-libpcap/"
 readme = "README.md"
 keywords = [ "network" ]
 categories = [ "network-programming" ]
+
+[dev-dependencies]
+quickcheck = { version = "0.9", default-features = false }

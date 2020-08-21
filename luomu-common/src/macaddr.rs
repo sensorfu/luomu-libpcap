@@ -76,8 +76,11 @@ impl std::ops::Deref for MacAddr {
 
 #[cfg(test)]
 mod tests {
-    use super::MacAddr;
     use std::convert::TryFrom;
+
+    use quickcheck::quickcheck;
+
+    use super::MacAddr;
 
     #[test]
     fn test_fmt_debug() {
@@ -87,7 +90,7 @@ mod tests {
     }
 
     #[test]
-    fn test_try_from_u64() {
+    fn test_try_from_u64_bounds() {
         let i0 = 0x0000000000000000;
         assert!(MacAddr::try_from(i0).is_ok());
 
@@ -99,5 +102,22 @@ mod tests {
 
         let i3 = 0xFFFFFFFFFFFFFFFF;
         assert!(MacAddr::try_from(i3).is_err());
+    }
+
+    #[test]
+    fn test_try_from_u64_byteoder() {
+        let i = 0x0000123456789ABC;
+        let mac = MacAddr::try_from(i).unwrap();
+        let b: &[u8] = (&mac).into();
+        assert_eq!(b, &[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]);
+    }
+
+    quickcheck! {
+        fn prop_macaddr_to_from(xs: (u8, u8, u8, u8, u8, u8)) -> bool {
+            let b1 = &[xs.0, xs.1, xs.2, xs.3, xs.4, xs.5];
+            let mac = MacAddr::from(b1);
+            let b2: &[u8] = (&mac).into();
+            b1 == b2
+        }
     }
 }
