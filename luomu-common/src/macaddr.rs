@@ -3,7 +3,12 @@ use std::fmt;
 
 use super::InvalidAddress;
 
-/// A MAC address used for example with Ethernet
+/// A Mac address used for example with Ethernet.
+///
+/// Mac address is handled as big endian value. All `From<T>` implementations
+/// returning `MacAddr` expect input as big endian. `From<u64>` also expects
+/// address to reside in lowest 6 bytes. All `From<MacAddr>` and
+/// `TryFrom<MacAddr>` implementations return their bytes as big endian.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MacAddr([u8; 6]);
 
