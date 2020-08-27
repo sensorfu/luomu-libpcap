@@ -42,6 +42,7 @@ const PCAP_ERROR: i32 = libpcap::PCAP_ERROR;
 /// <https://www.tcpdump.org/manpages/pcap_create.3pcap.html>
 pub fn pcap_create(source: &str) -> Result<PcapT> {
     let mut errbuf: Vec<u8> = vec![0; libpcap::PCAP_ERRBUF_SIZE as usize];
+    let interface = Some(source.to_string());
     let source = CString::new(source)?;
 
     let pcap_t =
@@ -55,7 +56,11 @@ pub fn pcap_create(source: &str) -> Result<PcapT> {
         return Err(Error::PcapError(err));
     }
 
-    Ok(PcapT { pcap_t, errbuf })
+    Ok(PcapT {
+        pcap_t,
+        errbuf,
+        interface,
+    })
 }
 
 /// Close a capture device or savefile
@@ -538,19 +543,26 @@ fn check_pcap_error(pcap_t: &PcapT, ret: i32) -> Result<()> {
         trace!("check_pcap_error({:p}, {}) = {}", pcap_t, ret, status);
     }
 
+    let interface = pcap_t
+        .interface
+        .clone()
+        .unwrap_or_else(|| String::from("<unknown>"));
+
     match ret {
         PCAP_SUCCESS => Ok(()),
         PCAP_ERROR => Err(get_error(pcap_t)?),
         libpcap::PCAP_ERROR_BREAK => Err(Error::Break),
-        libpcap::PCAP_ERROR_NOT_ACTIVATED => Err(Error::NotActivated),
-        libpcap::PCAP_ERROR_ACTIVATED => Err(Error::AlreadyActivated),
-        libpcap::PCAP_ERROR_NO_SUCH_DEVICE => Err(Error::NoSuchDevice),
-        libpcap::PCAP_ERROR_RFMON_NOTSUP => Err(Error::MonitorModeNotSupported),
+        libpcap::PCAP_ERROR_NOT_ACTIVATED => Err(Error::NotActivated(interface)),
+        libpcap::PCAP_ERROR_ACTIVATED => Err(Error::AlreadyActivated(interface)),
+        libpcap::PCAP_ERROR_NO_SUCH_DEVICE => Err(Error::NoSuchDevice(interface)),
+        libpcap::PCAP_ERROR_RFMON_NOTSUP => Err(Error::MonitorModeNotSupported(interface)),
         libpcap::PCAP_ERROR_NOT_RFMON => Err(Error::OnlySupportedInMonitorMode),
-        libpcap::PCAP_ERROR_PERM_DENIED => Err(Error::PermissionDenied),
-        libpcap::PCAP_ERROR_IFACE_NOT_UP => Err(Error::InterfaceNotUp),
-        libpcap::PCAP_ERROR_CANTSET_TSTAMP_TYPE => Err(Error::TimestampTypeNotSupported),
-        libpcap::PCAP_ERROR_PROMISC_PERM_DENIED => Err(Error::PromiscuousPermissionDenied),
+        libpcap::PCAP_ERROR_PERM_DENIED => Err(Error::PermissionDenied(interface)),
+        libpcap::PCAP_ERROR_IFACE_NOT_UP => Err(Error::InterfaceNotUp(interface)),
+        libpcap::PCAP_ERROR_CANTSET_TSTAMP_TYPE => Err(Error::TimestampTypeNotSupported(interface)),
+        libpcap::PCAP_ERROR_PROMISC_PERM_DENIED => {
+            Err(Error::PromiscuousPermissionDenied(interface))
+        }
         libpcap::PCAP_ERROR_TSTAMP_PRECISION_NOTSUP => Err(Error::TimestampPrecisionNotSupported),
         n if n < 0 => Err(Error::PcapErrorCode(n)),
         _ => Ok(()),

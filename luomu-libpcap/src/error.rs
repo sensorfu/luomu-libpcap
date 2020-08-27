@@ -1,5 +1,6 @@
 use std::error;
 use std::fmt;
+use std::io;
 
 /// Errors produced by luomu-libpcap.
 #[derive(Debug)]
@@ -7,29 +8,29 @@ pub enum Error {
     /// Loop terminated by pcap_breakloop (PCAP_ERROR_BREAK).
     Break,
     /// The capture needs to be activated (PCAP_ERROR_NOT_ACTIVATED).
-    NotActivated,
+    NotActivated(String),
     /// Capture handle already activated (PCAP_ERROR_ACTIVATED).
-    AlreadyActivated,
+    AlreadyActivated(String),
     /// The capture source specified when the handle was created doesn't exist
     /// (PCAP_ERROR_NO_SUCH_DEVICE).
-    NoSuchDevice,
+    NoSuchDevice(String),
     /// Monitor mode was specified but the capture source doesn't support
     /// monitor mode (PCAP_ERROR_RFMON_NOTSUP).
-    MonitorModeNotSupported,
+    MonitorModeNotSupported(String),
     /// The operation is supported only in monitor mode (PCAP_ERROR_NOT_RFMON).
     OnlySupportedInMonitorMode,
     /// The process doesn't have permission to open the capture source
     /// (PCAP_ERROR_PERM_DENIED).
-    PermissionDenied,
+    PermissionDenied(String),
     /// The capture source device is not up (PCAP_ERROR_IFACE_NOT_UP).
-    InterfaceNotUp,
+    InterfaceNotUp(String),
     /// This device doesn't support setting the time stamp type
     /// (PCAP_ERROR_CANTSET_TSTAMP_TYPE).
-    TimestampTypeNotSupported,
+    TimestampTypeNotSupported(String),
     /// The process has permission to open the capture source but doesn't have
     /// permission to put it into promiscuous mode
     /// (PCAP_ERROR_PROMISC_PERM_DENIED).
-    PromiscuousPermissionDenied,
+    PromiscuousPermissionDenied(String),
     /// The requested time stamp precision is not supported
     /// (PCAP_ERROR_TSTAMP_PRECISION_NOTSUP).
     TimestampPrecisionNotSupported,
@@ -53,17 +54,36 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::Break => write!(f, "libpcap: Loop terminated by pcap_breakloop (PCAP_ERROR_BREAK)."),
-            Error::NotActivated => write!(f, "libpcap: The capture needs to be activated (PCAP_ERROR_NOT_ACTIVATED)."),
-            Error::AlreadyActivated => write!(f, "libpcap: Capture handle already activated (PCAP_ERROR_ACTIVATED)."),
-            Error::NoSuchDevice => write!(f, "libpcap: The capture source specified when the handle was created doesn't exist (PCAP_ERROR_NO_SUCH_DEVICE)."),
-            Error::MonitorModeNotSupported => write!(f, "libpcap: Monitor mode was specified but the capture source doesn't support monitor mode (PCAP_ERROR_RFMON_NOTSUP)."),
-            Error::OnlySupportedInMonitorMode => write!(f, "libpcap: The operation is supported only in monitor mode (PCAP_ERROR_NOT_RFMON)."),
-            Error::PermissionDenied => write!(f, "libpcap: The process doesn't have permission to open the capture source (PCAP_ERROR_PERM_DENIED)."),
-            Error::InterfaceNotUp => write!(f, "libpcap: The capture source device is not up (PCAP_ERROR_IFACE_NOT_UP)."),
-            Error::TimestampTypeNotSupported => write!(f, "libpcap: This device doesn't support setting the time stamp type (PCAP_ERROR_CANTSET_TSTAMP_TYPE)."),
-            Error::PromiscuousPermissionDenied => write!(f, "libpcap: The process has permission to open the capture source but doesn't have permission to put it into promiscuous mode (PCAP_ERROR_PROMISC_PERM_DENIED)."),
-            Error::TimestampPrecisionNotSupported => write!(f, "libcap: The requested time stamp precision is not supported (PCAP_ERROR_TSTAMP_PRECISION_NOTSUP)."),
-
+            Error::NotActivated(interface) => {
+                write!(f, "libpcap: Capture handle for interface {} needs to be activated (PCAP_ERROR_NOT_ACTIVATED).", interface)
+            }
+            Error::AlreadyActivated(interface) => {
+                write!(f, "libpcap: Capture handle for interface {} is already activated (PCAP_ERROR_ACTIVATED).", interface)
+            }
+            Error::NoSuchDevice(interface) => {
+                write!(f, "libpcap: Capture interface {} doesn't exist (PCAP_ERROR_NO_SUCH_DEVICE).", interface)
+            }
+            Error::MonitorModeNotSupported(interface) => {
+                write!(f, "libpcap: Capture interface {} doesn't support monitor mode (PCAP_ERROR_RFMON_NOTSUP).", interface)
+            }
+            Error::OnlySupportedInMonitorMode => {
+                write!(f, "libpcap: Operation is supported only in monitor mode (PCAP_ERROR_NOT_RFMON).")
+            }
+            Error::PermissionDenied(interface) => {
+                write!(f, "libpcap: Process doesn't have permission to open the capture interface {} (PCAP_ERROR_PERM_DENIED).", interface)
+            }
+            Error::InterfaceNotUp(interface) => {
+                write!(f, "libpcap: Capture interface {} is not up (PCAP_ERROR_IFACE_NOT_UP).", interface)
+            }
+            Error::TimestampTypeNotSupported(interface) => {
+                write!(f, "libpcap: Capture interface {} doesn't support setting the time stamp type (PCAP_ERROR_CANTSET_TSTAMP_TYPE).", interface)
+            }
+            Error::PromiscuousPermissionDenied(interface) => {
+                write!(f, "libpcap: Process has permission to open the capture interface {} but doesn't have permission to put it into promiscuous mode (PCAP_ERROR_PROMISC_PERM_DENIED).", interface)
+            }
+            Error::TimestampPrecisionNotSupported => {
+                write!(f, "libcap: Time stamp precision is not supported (PCAP_ERROR_TSTAMP_PRECISION_NOTSUP).")
+            }
             Error::PcapError(err) => write!(f, "libpcap error: {}", err),
             Error::PcapWarning(warn) => write!(f, "libpcap warning: {}", warn),
             Error::PcapErrorCode(code) => write!(f, "libpcap unknown error code: {}", code),
@@ -89,5 +109,35 @@ impl From<std::ffi::NulError> for Error {
 impl From<std::ffi::FromBytesWithNulError> for Error {
     fn from(err: std::ffi::FromBytesWithNulError) -> Self {
         Error::CStringError(Box::new(err))
+    }
+}
+
+impl From<Error> for io::Error {
+    fn from(err: Error) -> io::Error {
+        match err {
+            Error::NoSuchDevice(interface) => {
+                io::Error::new(io::ErrorKind::NotFound, format!("{} not found", interface))
+            }
+            Error::MonitorModeNotSupported(interface) => io::Error::new(
+                io::ErrorKind::Other,
+                format!("interface {} doesn't support monitor mode", interface),
+            ),
+            Error::PermissionDenied(interface) => io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                format!("could not open {}, permission denied", interface),
+            ),
+            Error::InterfaceNotUp(interface) => io::Error::new(
+                io::ErrorKind::Other,
+                format!("could not open {}, interface not up", interface),
+            ),
+            Error::PromiscuousPermissionDenied(interface) => io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                format!(
+                    "could not set inteface {} in promiscous mode, permission denied",
+                    interface
+                ),
+            ),
+            err => io::Error::new(io::ErrorKind::Other, err.to_string()),
+        }
     }
 }
