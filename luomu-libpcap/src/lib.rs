@@ -53,6 +53,7 @@ pub struct PcapT {
     pcap_t: *mut libpcap::pcap_t,
     #[allow(dead_code)]
     errbuf: Vec<u8>,
+    interface: Option<String>,
 }
 
 impl PcapT {
