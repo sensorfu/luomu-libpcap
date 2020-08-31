@@ -133,7 +133,7 @@ impl From<Error> for io::Error {
             Error::PromiscuousPermissionDenied(interface) => io::Error::new(
                 io::ErrorKind::PermissionDenied,
                 format!(
-                    "could not set inteface {} in promiscous mode, permission denied",
+                    "could not set interface {} to promiscuous mode, permission denied",
                     interface
                 ),
             ),
