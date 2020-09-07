@@ -26,6 +26,8 @@ pub const PACKET_FLANOUT_FLAG_DEFRAG: libc::c_int = 0x800;
 
 pub const TP_STATUS_KERNEL: u32 = 0;
 pub const TP_STATUS_USER: u32 = 1;
+pub const TP_STATUS_VLAN_VALID: u32 = 1 << 4;
+pub const TP_STATUS_VLAN_TPID_VALID: u32 = 1 << 6;
 
 #[repr(C)]
 pub struct tpacket_req3 {
