@@ -302,6 +302,8 @@ impl<'a> Drop for Reader<'a> {
 pub struct Packet<'a> {
     buf: &'a [u8],
     timestamp: SystemTime,
+    vlan_tci: Option<u32>,
+    vlan_tpid: Option<u16>,
 }
 
 impl<'a> Packet<'a> {
@@ -315,6 +317,22 @@ impl<'a> Packet<'a> {
     /// called as the packet data is owned by the capture ringbuffer.
     pub fn packet(&self) -> &'a [u8] {
         self.buf
+    }
+
+    /// Get vlan Tag Protocol Identifier field if one was provided by the tpacket
+    /// interface. Sometimes the vlan information is stripped from the
+    /// returned packet, in that case vlan information can be read using
+    /// this method. See also `vlan_tci()`.
+    pub fn vlan_tpid(&self) -> Option<u16> {
+        self.vlan_tpid
+    }
+
+    /// Get vlan Tag Control Information field if one was provided by the tpacket
+    /// interface. Sometimes the vlan information is stripped from the
+    /// returned packet, in that case vlan information can be read using
+    /// this method. See also `vlan_tpid()`.
+    pub fn vlan_tci(&self) -> Option<u32> {
+        self.vlan_tci
     }
 }
 
@@ -337,10 +355,22 @@ impl<'a> Iterator for PacketIter<'a> {
                 None
             } else {
                 trace!("Consuming packet {}/{}", self.index, self.count);
+                let vlan_tci = if pkt.has_vlan_tci() {
+                    Some(pkt.get_vlan_tci())
+                } else {
+                    None
+                };
+                let vlan_tpid = if pkt.has_vlan_tpid() {
+                    Some(pkt.get_vlan_tpid())
+                } else {
+                    None
+                };
                 self.index += 1;
                 let ret = Packet {
                     buf: pkt.get_packet_data(),
                     timestamp: pkt.get_timestamp(),
+                    vlan_tci,
+                    vlan_tpid,
                 };
                 self.pkt = Some(pkt.get_next());
                 Some(ret)
