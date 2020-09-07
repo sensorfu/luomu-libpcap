@@ -27,6 +27,23 @@ impl<'a> PacketDescriptor<'a> {
         let data_ptr = unsafe { self.ptr.offset(self.hdr.tp_mac as isize) };
         unsafe { std::slice::from_raw_parts(data_ptr, self.hdr.tp_snaplen as usize) }
     }
+
+    pub fn has_vlan_tci(&self) -> bool {
+        (self.hdr.tp_status & if_packet::TP_STATUS_VLAN_VALID) == if_packet::TP_STATUS_VLAN_VALID
+    }
+
+    pub fn has_vlan_tpid(&self) -> bool {
+        (self.hdr.tp_status & if_packet::TP_STATUS_VLAN_TPID_VALID)
+            == if_packet::TP_STATUS_VLAN_TPID_VALID
+    }
+
+    pub fn get_vlan_tci(&self) -> u32 {
+        self.hdr.hv1.tp_vlan_tci
+    }
+
+    pub fn get_vlan_tpid(&self) -> u16 {
+        self.hdr.hv1.tp_vlan_tpid
+    }
 }
 
 impl<'a> From<*mut u8> for PacketDescriptor<'a> {
