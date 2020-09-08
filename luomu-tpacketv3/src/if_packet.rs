@@ -43,7 +43,7 @@ pub struct tpacket_req3 {
 pub struct tpacket_hdr_variant1 {
     pub tp_rxhash: u32,
     pub tp_vlan_tci: u32,
-    pub tp_vlan_tpid: u32,
+    pub tp_vlan_tpid: u16,
     tp_padding: u16,
 }
 #[derive(Debug)]
