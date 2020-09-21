@@ -1,6 +1,8 @@
 use std::mem;
 use std::time::Duration;
 
+use luomu_libpcap::PcapFilter;
+
 use crate::if_packet;
 
 pub fn htons(val: u16) -> u16 {
@@ -30,11 +32,15 @@ pub enum Option<T> {
     PacketAddMembership(OptValue<T>),
     PacketStatistics(OptValue<T>),
     PacketFanout(OptValue<T>),
+    SocketAttachFilter(OptValue<T>),
 }
 
 impl<T> Option<T> {
     fn level(&self) -> libc::c_int {
-        libc::SOL_PACKET
+        match self {
+            Option::SocketAttachFilter(_) => libc::SOL_SOCKET,
+            _ => libc::SOL_PACKET,
+        }
     }
 
     fn name(&self) -> libc::c_int {
@@ -44,6 +50,7 @@ impl<T> Option<T> {
             Option::PacketAddMembership(_) => if_packet::PACKET_ADD_MEMBERSHIP,
             Option::PacketStatistics(_) => if_packet::PACKET_STATISTICS,
             Option::PacketFanout(_) => if_packet::PACKET_FANOUT,
+            Option::SocketAttachFilter(_) => libc::SO_ATTACH_FILTER,
         }
     }
 
@@ -54,6 +61,7 @@ impl<T> Option<T> {
             Option::PacketAddMembership(v) => v,
             Option::PacketStatistics(v) => v,
             Option::PacketFanout(v) => v,
+            Option::SocketAttachFilter(v) => v,
         }
     }
 
@@ -64,6 +72,7 @@ impl<T> Option<T> {
             Option::PacketAddMembership(v) => v,
             Option::PacketStatistics(v) => v,
             Option::PacketFanout(v) => v,
+            Option::SocketAttachFilter(v) => v,
         }
     }
 }
@@ -165,4 +174,24 @@ impl Fd {
             _ => Ok(true),
         }
     }
+
+    /// Attach given BPF filter to socket.
+    pub fn set_filter(&self, filt: PcapFilter) -> Result<(), std::io::Error> {
+        let prog = sock_fprog {
+            len: filt.get_raw_filter_len() as u16,
+            filter: unsafe { filt.get_raw_filter() as *const libc::c_void },
+        };
+        self.setopt(Option::SocketAttachFilter(OptValue { val: prog }))
+    }
+}
+
+// This struct is given as parameter to SO_ATTACH_FILTER sockopt.
+// the filter should be be a pointer to sock_filter, but we treat
+// it as opaque pointer as we do not really care about how the filter
+// program is represented, just trust that the PcapFilter will provide
+// us with pointer to proper struct.
+#[repr(C)]
+struct sock_fprog {
+    len: u16,
+    filter: *const libc::c_void,
 }
