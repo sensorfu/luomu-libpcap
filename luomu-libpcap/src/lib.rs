@@ -238,7 +238,7 @@ pub struct PcapFilter {
     bpf_program: libpcap::bpf_program,
 }
 
-impl PcapFilter {
+impl<'a> PcapFilter {
     /// compile a filter expression
     ///
     /// `compile()` is used to compile the filter into a filter program. See
@@ -257,6 +257,23 @@ impl PcapFilter {
     /// for the syntax of that string.
     pub fn compile_with_pcap_t(pcap_t: &PcapT, filter_str: &str) -> Result<PcapFilter> {
         pcap_compile(pcap_t, filter_str)
+    }
+
+    /// Get length of the compiled filter
+    pub fn get_raw_filter_len(&self) -> u32 {
+        self.bpf_program.bf_len
+    }
+
+    /// Get pointer to the raw compiled filter program.
+    /// Raw filter may be used when attaching filter to socket outside libpcap.
+    /// # Safety
+    /// Note that the pointer is valid only as long as this filter is valid.
+    /// The returned pointer will be cast as *void since there is no common
+    /// structure to which export the program.
+    pub unsafe fn get_raw_filter(&self) -> &std::ffi::c_void {
+        (self.bpf_program.bf_insns as *const std::ffi::c_void)
+            .as_ref()
+            .unwrap()
     }
 }
 
