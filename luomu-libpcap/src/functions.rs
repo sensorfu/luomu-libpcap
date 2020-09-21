@@ -344,7 +344,11 @@ pub fn pcap_open_dead() -> Result<PcapT> {
     debug_assert!(!pcap_t.is_null(), "Can pcap_open_dead() fail?");
 
     let errbuf: Vec<u8> = vec![0; libpcap::PCAP_ERRBUF_SIZE as usize];
-    Ok(PcapT { pcap_t, errbuf })
+    Ok(PcapT {
+        pcap_t,
+        errbuf,
+        interface: None,
+    })
 }
 
 /// get a list of capture devices
