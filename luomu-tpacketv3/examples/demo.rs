@@ -95,7 +95,7 @@ mod linux {
             params.block_count,
             params.block_size
         );
-        match tpacketv3::reader(interface, params) {
+        match tpacketv3::reader(interface, None, params) {
             Err(e) => warn!("Unable to create reader: {}", e),
             Ok(rd) => {
                 packet_producer(rd, ch, stop);

@@ -8,6 +8,8 @@ use std::ffi::CString;
 use std::fmt;
 use std::time::{Duration, SystemTime};
 
+use luomu_libpcap::PcapFilter;
+
 mod if_packet;
 mod ringbuf;
 mod socket;
@@ -114,12 +116,24 @@ pub struct Reader<'a> {
 }
 
 /// Get new reader instance reading packets from given interface.
+/// `pcap_filter` should contain "libpcap filter string" that can be used to
+/// filter incoming traffic or None to indicate that no filtering should be done.
 /// The `parameters` are used to configure the ringbuffer used for capturing.
 /// On success returns `Reader` instance to use to read captured packets.
-pub fn reader<'a>(interface: &str, parameters: ReaderParameters) -> Result<Reader<'a>, String> {
+pub fn reader<'a>(
+    interface: &str,
+    pcap_filter: Option<&str>,
+    parameters: ReaderParameters,
+) -> Result<Reader<'a>, String> {
     let index = ifindex_for(&interface);
     trace!("Index for interface {} is {}", interface, index);
     let sock = socket::Fd::create().map_err(|e| format!("Can not create socket {}", e))?;
+
+    // try to compile the filter, if one is set, first
+    let filter = match pcap_filter {
+        Some(f) => Some(PcapFilter::compile(f).map_err(|e| format!("Invalid pcap filter: {}", e))?),
+        None => None,
+    };
 
     // set version to tpacket_v3
     let opt = socket::OptValue {
@@ -142,6 +156,12 @@ pub fn reader<'a>(interface: &str, parameters: ReaderParameters) -> Result<Reade
     trace!("setting RX_PACKET request");
     sock.setopt(socket::Option::PacketRxRing(socket::OptValue { val: req }))
         .map_err(|e| format!("RX_RING sockopt failed: {}", e))?;
+
+    if let Some(f) = filter {
+        trace!("setting filter");
+        sock.set_filter(f)
+            .map_err(|e| format!("Can not set filter: {}", e))?;
+    }
 
     trace!("Setting PROMISC mode");
     let mr = libc::packet_mreq {
