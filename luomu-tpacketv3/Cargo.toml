@@ -17,6 +17,7 @@ categories = [ "api-bindings", "network-programming" ]
 [dependencies]
 libc = "0.2"
 log = "0.4"
+luomu-libpcap = {path = "../luomu-libpcap/"}
 
 [dev-dependencies]
 env_logger = "0.7"
