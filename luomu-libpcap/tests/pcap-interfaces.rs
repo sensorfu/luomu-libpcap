@@ -1,6 +1,6 @@
 use std::net::IpAddr;
 
-use luomu_libpcap::{PcapIfT, Result};
+use luomu_libpcap::{PcapFilter, PcapIfT, Result};
 
 #[test]
 fn test_get_interfaces() -> Result<()> {
@@ -20,4 +20,19 @@ fn test_find_localhost() -> Result<()> {
     }
     assert!(false, "Couldn't find localhost");
     unreachable!("execution shouldn't get here")
+}
+
+#[test]
+fn test_compile_pcap_filter() -> Result<()> {
+    let filter = "host 10.0.0.1";
+    let _compiled = PcapFilter::compile(filter)?;
+    Ok(())
+}
+
+#[test]
+fn test_compile_invalid_pcap_filter() -> Result<()> {
+    let filter = "foo";
+    let res = PcapFilter::compile(filter);
+    assert!(res.is_err());
+    Ok(())
 }
