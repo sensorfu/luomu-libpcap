@@ -238,7 +238,7 @@ pub struct PcapFilter {
     bpf_program: libpcap::bpf_program,
 }
 
-impl<'a> PcapFilter {
+impl PcapFilter {
     /// compile a filter expression
     ///
     /// `compile()` is used to compile the filter into a filter program. See
