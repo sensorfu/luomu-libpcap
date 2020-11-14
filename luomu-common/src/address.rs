@@ -17,18 +17,12 @@ pub enum Address {
 impl Address {
     /// True if IPv4 address
     pub fn is_ipv4(&self) -> bool {
-        match self {
-            Address::Ipv4(_) => true,
-            _ => false,
-        }
+        matches!(self, Address::Ipv4(_))
     }
 
     /// True if IPv6 address
     pub fn is_ipv6(&self) -> bool {
-        match self {
-            Address::Ipv6(_) => true,
-            _ => false,
-        }
+        matches!(self, Address::Ipv6(_))
     }
 
     /// True if either IPv4 or IPv6 address
@@ -38,10 +32,7 @@ impl Address {
 
     /// True if MAC address
     pub fn is_mac(&self) -> bool {
-        match self {
-            Address::Mac(_) => true,
-            _ => false,
-        }
+        matches!(self, Address::Mac(_))
     }
 
     /// Return the `Ipv4Addr` or None
