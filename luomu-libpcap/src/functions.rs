@@ -564,7 +564,12 @@ fn check_pcap_error(pcap_t: &PcapT, ret: i32) -> Result<()> {
             0 => "ok".to_string(),
             n => status_to_str(n).unwrap_or_default(),
         };
-        trace!("check_pcap_error({:p}, {}) = {}", pcap_t.pcap_t, ret, status);
+        trace!(
+            "check_pcap_error({:p}, {}) = {}",
+            pcap_t.pcap_t,
+            ret,
+            status
+        );
     }
 
     let interface = pcap_t
