@@ -300,7 +300,6 @@ pub fn pcap_next_ex(pcap_t: &PcapT) -> Result<Packet> {
     let mut packet: *const libc::c_uchar = std::ptr::null();
 
     let ret = unsafe { libpcap::pcap_next_ex(pcap_t.pcap_t, &mut header, &mut packet) };
-    check_pcap_error(pcap_t, ret)?;
 
     // pcap_next_ex() returns 1 if the packet was read without problems, 0 if
     // packets are being read from a live capture and the packet buffer timeout
@@ -308,7 +307,7 @@ pub fn pcap_next_ex(pcap_t: &PcapT) -> Result<Packet> {
     match ret {
         1 => (),
         0 => return Err(Error::Timeout),
-        n => return Err(Error::PcapErrorCode(n)),
+        n => check_pcap_error(pcap_t, n)?,
     }
 
     if header.is_null() || packet.is_null() {
