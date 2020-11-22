@@ -57,6 +57,17 @@ pub struct PcapT {
 }
 
 impl PcapT {
+    /// get interface name
+    ///
+    /// `get_interface` returns the interface name if known or "<unknown>".
+    pub fn get_inteface(&self) -> String {
+        if let Some(name) = &self.interface {
+            name.to_owned()
+        } else {
+            String::from("<unknown>")
+        }
+    }
+
     /// get libpcap error message text
     ///
     /// `get_error()` returns the error pertaining to the last pcap library error.

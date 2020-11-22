@@ -571,25 +571,20 @@ fn check_pcap_error(pcap_t: &PcapT, ret: i32) -> Result<()> {
         );
     }
 
-    let interface = pcap_t
-        .interface
-        .clone()
-        .unwrap_or_else(|| String::from("<unknown>"));
-
     match ret {
         PCAP_SUCCESS => Ok(()),
         PCAP_ERROR => Err(get_error(pcap_t)?),
         libpcap::PCAP_ERROR_BREAK => Err(Error::Break),
-        libpcap::PCAP_ERROR_NOT_ACTIVATED => Err(Error::NotActivated(interface)),
-        libpcap::PCAP_ERROR_ACTIVATED => Err(Error::AlreadyActivated(interface)),
-        libpcap::PCAP_ERROR_NO_SUCH_DEVICE => Err(Error::NoSuchDevice(interface)),
-        libpcap::PCAP_ERROR_RFMON_NOTSUP => Err(Error::MonitorModeNotSupported(interface)),
+        libpcap::PCAP_ERROR_NOT_ACTIVATED => Err(Error::NotActivated(pcap_t.get_inteface())),
+        libpcap::PCAP_ERROR_ACTIVATED => Err(Error::AlreadyActivated(pcap_t.get_inteface())),
+        libpcap::PCAP_ERROR_NO_SUCH_DEVICE => Err(Error::NoSuchDevice(pcap_t.get_inteface())),
+        libpcap::PCAP_ERROR_RFMON_NOTSUP => Err(Error::MonitorModeNotSupported(pcap_t.get_inteface())),
         libpcap::PCAP_ERROR_NOT_RFMON => Err(Error::OnlySupportedInMonitorMode),
-        libpcap::PCAP_ERROR_PERM_DENIED => Err(Error::PermissionDenied(interface)),
-        libpcap::PCAP_ERROR_IFACE_NOT_UP => Err(Error::InterfaceNotUp(interface)),
-        libpcap::PCAP_ERROR_CANTSET_TSTAMP_TYPE => Err(Error::TimestampTypeNotSupported(interface)),
+        libpcap::PCAP_ERROR_PERM_DENIED => Err(Error::PermissionDenied(pcap_t.get_inteface())),
+        libpcap::PCAP_ERROR_IFACE_NOT_UP => Err(Error::InterfaceNotUp(pcap_t.get_inteface())),
+        libpcap::PCAP_ERROR_CANTSET_TSTAMP_TYPE => Err(Error::TimestampTypeNotSupported(pcap_t.get_inteface())),
         libpcap::PCAP_ERROR_PROMISC_PERM_DENIED => {
-            Err(Error::PromiscuousPermissionDenied(interface))
+            Err(Error::PromiscuousPermissionDenied(pcap_t.get_inteface()))
         }
         libpcap::PCAP_ERROR_TSTAMP_PRECISION_NOTSUP => Err(Error::TimestampPrecisionNotSupported),
         n if n < 0 => Err(Error::PcapErrorCode(n)),
