@@ -53,7 +53,10 @@ impl error::Error for Error {}
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::Break => write!(f, "libpcap: Loop terminated by pcap_breakloop (PCAP_ERROR_BREAK)."),
+            Error::Break => write!(
+                f,
+                "libpcap: Loop terminated by pcap_breakloop (PCAP_ERROR_BREAK)."
+            ),
             Error::NotActivated(interface) => {
                 write!(f, "libpcap: Capture handle for interface {} needs to be activated (PCAP_ERROR_NOT_ACTIVATED).", interface)
             }
@@ -61,19 +64,30 @@ impl fmt::Display for Error {
                 write!(f, "libpcap: Capture handle for interface {} is already activated (PCAP_ERROR_ACTIVATED).", interface)
             }
             Error::NoSuchDevice(interface) => {
-                write!(f, "libpcap: Capture interface {} doesn't exist (PCAP_ERROR_NO_SUCH_DEVICE).", interface)
+                write!(
+                    f,
+                    "libpcap: Capture interface {} doesn't exist (PCAP_ERROR_NO_SUCH_DEVICE).",
+                    interface
+                )
             }
             Error::MonitorModeNotSupported(interface) => {
                 write!(f, "libpcap: Capture interface {} doesn't support monitor mode (PCAP_ERROR_RFMON_NOTSUP).", interface)
             }
             Error::OnlySupportedInMonitorMode => {
-                write!(f, "libpcap: Operation is supported only in monitor mode (PCAP_ERROR_NOT_RFMON).")
+                write!(
+                    f,
+                    "libpcap: Operation is supported only in monitor mode (PCAP_ERROR_NOT_RFMON)."
+                )
             }
             Error::PermissionDenied(interface) => {
                 write!(f, "libpcap: Process doesn't have permission to open the capture interface {} (PCAP_ERROR_PERM_DENIED).", interface)
             }
             Error::InterfaceNotUp(interface) => {
-                write!(f, "libpcap: Capture interface {} is not up (PCAP_ERROR_IFACE_NOT_UP).", interface)
+                write!(
+                    f,
+                    "libpcap: Capture interface {} is not up (PCAP_ERROR_IFACE_NOT_UP).",
+                    interface
+                )
             }
             Error::TimestampTypeNotSupported(interface) => {
                 write!(f, "libpcap: Capture interface {} doesn't support setting the time stamp type (PCAP_ERROR_CANTSET_TSTAMP_TYPE).", interface)
