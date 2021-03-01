@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-LIBPCAP='libpcap-1.9.1'
+LIBPCAP='libpcap-1.10.0'
 
 ./verify.sh "${LIBPCAP}.tar.gz"
 
@@ -11,7 +11,6 @@ gunzip -c "${LIBPCAP}.tar.gz" | tar xf - -C "${DEST}"
 
 bindgen \
     "${DEST}/${LIBPCAP}/pcap/pcap.h" \
-    --no-include-path-detection \
     --distrust-clang-mangling \
     --use-core \
     --ctypes-prefix='libc' \
@@ -33,7 +32,6 @@ bindgen \
 
 bindgen \
     "${DEST}/${LIBPCAP}/pcap/dlt.h" \
-    --no-include-path-detection \
     --distrust-clang-mangling \
     --use-core \
     -o src/dlt.rs \
