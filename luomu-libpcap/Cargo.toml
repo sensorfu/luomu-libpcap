@@ -13,9 +13,6 @@ readme = "README.md"
 keywords = [ "pcap", "libpcap", "network" ]
 categories = [ "api-bindings", "network-programming" ]
 
-[badges]
-circle-ci = { repository = "sensorfu/luomu-libpcap", branch = "master" }
-
 [dependencies]
 libc = { version = "0.2", default-features = false }
 log = { version = "0.4", default-features = false }
@@ -23,4 +20,4 @@ luomu-common = { path = "../luomu-common" }
 luomu-libpcap-sys = { path = "../luomu-libpcap-sys" }
 
 [dev-dependencies]
-env_logger = {version = "0.7", default-features = false }
+env_logger = {version = "0.8", default-features = false }

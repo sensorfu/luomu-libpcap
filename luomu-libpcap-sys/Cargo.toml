@@ -13,9 +13,6 @@ readme = "README.md"
 keywords = [ "pcap", "libpcap", "network" ]
 categories = [ "api-bindings", "external-ffi-bindings", "network-programming", "no-std" ]
 
-[badges]
-circle-ci = { repository = "sensorfu/luomu-libpcap", branch = "master" }
-
 [dependencies]
 libc = { version = "0.2", default-features = false }
 
