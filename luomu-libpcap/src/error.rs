@@ -45,7 +45,14 @@ pub enum Error {
     /// Timeout happened (maybe during live capture)
     Timeout,
     /// Error from Rust <-> C String conversion
-    CStringError(Box<dyn error::Error>),
+    CStringError(CStringError),
+}
+
+#[derive(Debug)]
+pub enum CStringError {
+    Utf8(std::str::Utf8Error),
+    Nul(std::ffi::NulError),
+    FromBytesWithNul(std::ffi::FromBytesWithNulError),
 }
 
 impl error::Error for Error {}
@@ -103,26 +110,28 @@ impl fmt::Display for Error {
             Error::PcapErrorCode(code) => write!(f, "libpcap unknown error code: {}", code),
 
             Error::Timeout => write!(f, "timeout"),
-            Error::CStringError(err) => err.fmt(f),
+            Error::CStringError(CStringError::FromBytesWithNul(err)) => err.fmt(f),
+            Error::CStringError(CStringError::Nul(err)) => err.fmt(f),
+            Error::CStringError(CStringError::Utf8(err)) => err.fmt(f),
         }
     }
 }
 
 impl From<std::str::Utf8Error> for Error {
     fn from(err: std::str::Utf8Error) -> Self {
-        Error::CStringError(Box::new(err))
+        Error::CStringError(CStringError::Utf8(err))
     }
 }
 
 impl From<std::ffi::NulError> for Error {
     fn from(err: std::ffi::NulError) -> Self {
-        Error::CStringError(Box::new(err))
+        Error::CStringError(CStringError::Nul(err))
     }
 }
 
 impl From<std::ffi::FromBytesWithNulError> for Error {
     fn from(err: std::ffi::FromBytesWithNulError) -> Self {
-        Error::CStringError(Box::new(err))
+        Error::CStringError(CStringError::FromBytesWithNul(err))
     }
 }
 
