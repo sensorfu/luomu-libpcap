@@ -180,7 +180,7 @@ mod linux {
                 "qm" => Some(tpacketv3::FanoutMode::QM(groupid)),
                 "cpu" => Some(tpacketv3::FanoutMode::CPU(groupid)),
                 "rnd" => Some(tpacketv3::FanoutMode::RND(groupid)),
-                _ => panic!(format!("Fanout mode {} not supported", v)),
+                _ => panic!("Fanout mode {} not supported", v),
             }
         } else {
             None
