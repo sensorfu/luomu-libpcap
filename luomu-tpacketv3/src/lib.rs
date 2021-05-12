@@ -1,4 +1,7 @@
 #![cfg(target_os = "linux")]
+// Remove after Clippy stops nagging about this.
+// Upstream issue: https://github.com/rust-lang/rust-clippy/issues/6974
+#![allow(clippy::upper_case_acronyms)]
 
 #[macro_use]
 extern crate log;
