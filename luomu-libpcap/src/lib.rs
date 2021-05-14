@@ -44,6 +44,9 @@ use functions::*;
 mod error;
 pub use error::Error;
 
+#[cfg(feature = "async-tokio")]
+pub mod tokio;
+
 /// A `Result` wrapping luomu-libpcap's errors in `Err` side
 pub type Result<T> = result::Result<T, Error>;
 
@@ -402,6 +405,52 @@ impl Packet {
     /// The packet is never empty. But you might want to make sure.
     pub fn is_empty(&self) -> bool {
         self.len == 0
+    }
+}
+
+/// A Packet from network capture. This type owns the packet content so at least
+/// one copy of the data has been done constructing this.
+#[derive(Debug)]
+pub struct OwnedPacket {
+    packet: Vec<u8>,
+    timestamp: SystemTime,
+}
+
+impl OwnedPacket {
+    /// get a timestamp of a packet
+    ///
+    /// When capturing traffic, each packet is given a timestamp representing
+    /// the arrival time of the packet. This time is an approximation.
+    ///
+    /// <https://www.tcpdump.org/manpages/pcap-tstamp.7.html>
+    pub fn timestamp(&self) -> SystemTime {
+        self.timestamp
+    }
+
+    /// Get the contents of a packet.
+    pub fn packet(&self) -> &[u8] {
+        &self.packet
+    }
+
+    /// Length of captured packet.
+    ///
+    /// Packet should always have some bytes so length is never zero.
+    pub fn len(&self) -> usize {
+        self.packet.len()
+    }
+
+    /// The packet is never empty. But you might want to make sure.
+    pub fn is_empty(&self) -> bool {
+        self.packet.is_empty()
+    }
+}
+
+impl From<Packet> for OwnedPacket {
+    fn from(p: Packet) -> Self {
+        Self {
+            packet: p.packet().to_vec(),
+            timestamp: p.timestamp(),
+        }
     }
 }
 
