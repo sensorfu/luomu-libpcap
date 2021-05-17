@@ -55,6 +55,11 @@ pub struct PcapT {
     interface: Option<String>,
 }
 
+// I assume the pcap_t pointer is safe to move between threads, but it can only
+// be used from one thread. libpcap documentation is vague about thread safety,
+// so we try this.
+unsafe impl Send for PcapT {}
+
 impl PcapT {
     /// get interface name
     ///
