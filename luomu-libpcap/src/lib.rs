@@ -75,7 +75,7 @@ impl PcapT {
     /// `Ok(Error)` contains the error from libpcap as intended. `Err(Error)`
     /// contains the error happened while calling this function.
     pub fn get_error(&self) -> Result<Error> {
-        get_error(&self)
+        get_error(self)
     }
 }
 
@@ -310,7 +310,7 @@ impl<'p> Iterator for PcapIter<'p> {
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            match pcap_next_ex(&self.pcap_t) {
+            match pcap_next_ex(self.pcap_t) {
                 Ok(p) => return Some(p),
                 Err(e) => match e {
                     // pcap_next_ex() sometimes seems to return
