@@ -128,7 +128,7 @@ pub fn reader<'a>(
     pcap_filter: Option<&str>,
     parameters: ReaderParameters,
 ) -> Result<Reader<'a>, String> {
-    let index = ifindex_for(&interface);
+    let index = ifindex_for(interface);
     trace!("Index for interface {} is {}", interface, index);
     let sock = socket::Fd::create().map_err(|e| format!("Can not create socket {}", e))?;
 
