@@ -32,6 +32,7 @@ use std::convert::TryFrom;
 use std::default;
 use std::net::IpAddr;
 use std::ops::Deref;
+use std::path::Path;
 use std::result;
 use std::time::{Duration, SystemTime};
 
@@ -116,6 +117,16 @@ impl Pcap {
     pub fn new(source: &str) -> Result<Pcap> {
         let pcap_t = pcap_create(source)?;
         Ok(Pcap { pcap_t })
+    }
+
+    /// Create a capture handle for reading packets from given savefile.
+    ///
+    /// This function can be used to create handle to read packes from saved
+    /// pcap -file. Use `capture()` to get iterator for packets in the file.
+    pub fn offline<P: AsRef<Path>>(savefile: P) -> Result<Pcap> {
+        Ok(Pcap {
+            pcap_t: pcap_open_offline(savefile)?,
+        })
     }
 
     /// Use builder to create a live capture handle

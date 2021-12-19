@@ -16,6 +16,7 @@ use std::collections::BTreeSet;
 use std::ffi::{c_void, CStr, CString};
 use std::mem::MaybeUninit;
 use std::net::{Ipv4Addr, Ipv6Addr};
+use std::path::Path;
 use std::time::{Duration, UNIX_EPOCH};
 
 use log::trace;
@@ -60,6 +61,33 @@ pub fn pcap_create(source: &str) -> Result<PcapT> {
         pcap_t,
         errbuf,
         interface,
+    })
+}
+
+/// Create a capture handle for reading data from savefile
+///
+/// `pcap_open_offline()` is used to open given savefile for reading.
+///
+/// <https://www.tcpdump.org/manpages/pcap_open_offline.3pcap.html>
+pub fn pcap_open_offline<P: AsRef<Path>>(savefile: P) -> Result<PcapT> {
+    let mut errbuf: Vec<u8> = vec![0; libpcap::PCAP_ERRBUF_SIZE as usize];
+
+    let fname = CString::new(savefile.as_ref().to_string_lossy().as_ref())?;
+
+    let pcap_t = unsafe {
+        libpcap::pcap_open_offline(fname.as_ptr(), errbuf.as_mut_ptr() as *mut libc::c_char)
+    };
+
+    trace!("pcap_open_offline({:?}) => {:p}", fname, pcap_t);
+    if pcap_t.is_null() {
+        let cstr = unsafe { CStr::from_ptr(errbuf.as_ptr() as *const libc::c_char) };
+        let err = cstr.to_str()?.to_owned();
+        return Err(Error::PcapError(err));
+    }
+    Ok(PcapT {
+        pcap_t,
+        errbuf,
+        interface: None,
     })
 }
 
