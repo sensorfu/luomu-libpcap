@@ -406,6 +406,12 @@ impl Packet {
         unsafe { std::slice::from_raw_parts(self.ptr, self.len) }
     }
 
+    /// Get the contents of a packet as `Bytes`. This makes a copy of the data.
+    #[cfg(feature = "bytes")]
+    pub fn packet_bytes(&self) -> bytes::Bytes {
+        bytes::Bytes::copy_from_slice(self.packet())
+    }
+
     /// Length of captured packet.
     ///
     /// Packet should always have some bytes so length is never zero.
@@ -441,6 +447,12 @@ impl OwnedPacket {
     /// Get the contents of a packet.
     pub fn packet(&self) -> &[u8] {
         &self.packet
+    }
+
+    /// Get the contents of a packet  as `Bytes` without copying.
+    #[cfg(feature = "bytes")]
+    pub fn packet_bytes(self) -> bytes::Bytes {
+        bytes::Bytes::from(self.packet)
     }
 
     /// Length of captured packet.
