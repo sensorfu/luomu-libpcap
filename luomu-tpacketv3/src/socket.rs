@@ -5,6 +5,13 @@ use luomu_libpcap::PcapFilter;
 
 use crate::if_packet;
 
+// at least on alpine 3.15, SO_ATTCH_FILTER is not defined on libc crate
+#[cfg(target_env = "musl")]
+const SO_ATTACH_FILTER: libc::c_int = 26;
+
+#[cfg(not(target_env = "musl"))]
+const SO_ATTACH_FILTER: libc::c_int = libc::SO_ATTACH_FILTER;
+
 pub fn htons(val: u16) -> u16 {
     val.to_be()
 }
@@ -50,7 +57,7 @@ impl<T> Option<T> {
             Option::PacketAddMembership(_) => if_packet::PACKET_ADD_MEMBERSHIP,
             Option::PacketStatistics(_) => if_packet::PACKET_STATISTICS,
             Option::PacketFanout(_) => if_packet::PACKET_FANOUT,
-            Option::SocketAttachFilter(_) => libc::SO_ATTACH_FILTER,
+            Option::SocketAttachFilter(_) => SO_ATTACH_FILTER,
         }
     }
 
