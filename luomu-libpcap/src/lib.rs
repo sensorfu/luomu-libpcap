@@ -233,7 +233,7 @@ impl PcapBuilder {
     pub fn set_timeout(self, to_ms: Duration) -> Result<PcapBuilder> {
         pcap_set_timeout(
             &self.pcap_t,
-            (to_ms.as_millis().min(std::i32::MAX as u128)) as i32,
+            (to_ms.as_millis().min(i32::MAX as u128)) as i32,
         )?;
         Ok(self)
     }
