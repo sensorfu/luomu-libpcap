@@ -27,6 +27,7 @@
 //! You probably want to use the `Pcap` struct and other things from root of
 //! this crate.
 
+use std::borrow::Cow;
 use std::collections::{BTreeSet, HashSet};
 use std::convert::TryFrom;
 use std::default;
@@ -325,7 +326,7 @@ impl<'p> PcapIter<'p> {
 }
 
 impl<'p> Iterator for PcapIter<'p> {
-    type Item = Packet;
+    type Item = Packet<'p>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -382,58 +383,22 @@ impl PcapStat {
 
 /// A network packet captured by libpcap.
 ///
-/// This struct contains memory owned by `libpcap`. Copy the contents out before
-/// getting next `Packet` from `libpcap`.
-pub struct Packet {
-    timestamp: SystemTime,
-    ptr: *const libc::c_uchar,
-    len: usize,
-}
-
-impl Packet {
-    /// get a timestamp of a packet
-    ///
-    /// When capturing traffic, each packet is given a timestamp representing
-    /// the arrival time of the packet. This time is an approximation.
-    ///
-    /// <https://www.tcpdump.org/manpages/pcap-tstamp.7.html>
-    pub fn timestamp(&self) -> SystemTime {
-        self.timestamp
-    }
-
-    /// Get the contents of a packet.
-    pub fn packet(&self) -> &[u8] {
-        unsafe { std::slice::from_raw_parts(self.ptr, self.len) }
-    }
-
-    /// Get the contents of a packet as `Bytes`. This makes a copy of the data.
-    #[cfg(feature = "bytes")]
-    pub fn packet_bytes(&self) -> bytes::Bytes {
-        bytes::Bytes::copy_from_slice(self.packet())
-    }
-
-    /// Length of captured packet.
-    ///
-    /// Packet should always have some bytes so length is never zero.
-    pub fn len(&self) -> usize {
-        self.len
-    }
-
-    /// The packet is never empty. But you might want to make sure.
-    pub fn is_empty(&self) -> bool {
-        self.len == 0
-    }
-}
-
-/// A Packet from network capture. This type owns the packet content so at least
-/// one copy of the data has been done constructing this.
+/// This structure contains either memory owned by `libpcap` or an owned copy.
+/// The `libpcap` owned data is good for doing a simple filtering in the receive
+/// loop as it eliminates making a copy of the data.
+//
+/// If you want to keep the contents of the `Packet`, make the `Packet` owned
+/// before getting next `Packet` from `libpcap`.
+///
+/// To see if `Packet` owns it's own data, call `Packet::is_owned()` and to make
+/// a copy use `Packet::to_owned()`.
 #[derive(Debug)]
-pub struct OwnedPacket {
-    packet: Vec<u8>,
+pub struct Packet<'a> {
     timestamp: SystemTime,
+    packet: Cow<'a, [u8]>,
 }
 
-impl OwnedPacket {
+impl<'a> Packet<'a> {
     /// get a timestamp of a packet
     ///
     /// When capturing traffic, each packet is given a timestamp representing
@@ -449,10 +414,25 @@ impl OwnedPacket {
         &self.packet
     }
 
-    /// Get the contents of a packet  as `Bytes` without copying.
+    /// Get the contents of a packet.
+    pub fn to_vec(self) -> Vec<u8> {
+        self.packet.into_owned()
+    }
+
+    /// Check if contents of `Packet` are owned.
+    pub const fn is_owned(&self) -> bool {
+        matches!(self.packet, Cow::Owned(_))
+    }
+
+    /// Check if contents of `Packet` are borrowed.
+    pub const fn is_borrowed(&self) -> bool {
+        matches!(self.packet, Cow::Borrowed(_))
+    }
+
+    /// Get the contents of a packet as `Bytes`. This makes a copy of the data.
     #[cfg(feature = "bytes")]
-    pub fn packet_bytes(self) -> bytes::Bytes {
-        bytes::Bytes::from(self.packet)
+    pub fn packet_bytes(&self) -> bytes::Bytes {
+        bytes::Bytes::copy_from_slice(self.packet())
     }
 
     /// Length of captured packet.
@@ -468,11 +448,13 @@ impl OwnedPacket {
     }
 }
 
-impl From<Packet> for OwnedPacket {
-    fn from(p: Packet) -> Self {
-        Self {
-            packet: p.packet().to_vec(),
-            timestamp: p.timestamp(),
+impl<'a> ToOwned for Packet<'a> {
+    type Owned = Packet<'a>;
+
+    fn to_owned(&self) -> Self::Owned {
+        Packet {
+            timestamp: self.timestamp,
+            packet: Cow::Owned(self.packet.to_vec()),
         }
     }
 }
@@ -704,4 +686,69 @@ pub enum InterfaceFlag {
     Up,
     /// set if the interface is running
     Running,
+}
+
+#[cfg(test)]
+mod tests {
+    use std::borrow::Cow;
+    use std::time::SystemTime;
+
+    use crate::Packet;
+
+    const BUF: &[u8] = b"Hello world";
+    const PACKET: Packet<'_> = Packet {
+        timestamp: SystemTime::UNIX_EPOCH,
+        packet: Cow::Borrowed(BUF),
+    };
+
+    #[test]
+    fn test_packet_timestamp() {
+        assert_eq!(PACKET.timestamp(), SystemTime::UNIX_EPOCH);
+        let p = PACKET.to_owned();
+        assert_eq!(p.timestamp(), SystemTime::UNIX_EPOCH);
+    }
+
+    #[test]
+    fn test_packet_packet() {
+        assert_eq!(PACKET.packet(), BUF);
+    }
+
+    #[test]
+    fn test_packet_to_vec() {
+        assert_eq!(PACKET.to_vec(), Vec::from(BUF));
+    }
+
+    #[test]
+    fn test_packet_to_owned() {
+        assert!(PACKET.is_borrowed());
+        let packet = PACKET.to_owned();
+        assert!(!packet.is_borrowed());
+        assert!(packet.is_owned());
+    }
+
+    #[test]
+    fn test_packet_is_borrowed() {
+        assert!(PACKET.is_borrowed());
+    }
+
+    #[test]
+    fn test_packet_len() {
+        assert_eq!(PACKET.len(), BUF.len());
+        let packet = PACKET.to_owned();
+        assert_eq!(packet.len(), BUF.len());
+        let buf = PACKET.to_vec();
+        assert_eq!(buf.len(), BUF.len());
+    }
+
+    #[test]
+    fn test_packet_is_empty() {
+        assert!(!PACKET.is_empty());
+
+        let p = Packet {
+            timestamp: SystemTime::UNIX_EPOCH,
+            packet: Cow::Borrowed(&[]),
+        };
+
+        assert!(p.is_empty());
+    }
 }

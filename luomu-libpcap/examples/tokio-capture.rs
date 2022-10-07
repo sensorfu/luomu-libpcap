@@ -24,7 +24,7 @@ async fn capture(interface: &'static str) -> Result<()> {
     let mut pcap = tokio_capture::AsyncCapture::new(pcap)?;
 
     while let Some(packet) = pcap.try_next().await? {
-        println!("{:?}", packet.timestamp());
+        println!("{:?} len = {}", packet.timestamp(), packet.len());
     }
 
     Ok(())

@@ -9,15 +9,14 @@ use tokio::sync::mpsc::{self, UnboundedSender};
 use tokio::task;
 
 use crate::functions as libpcap;
-use crate::Error;
-use crate::OwnedPacket;
+use crate::{Packet, Error};
 
 /// Asynchronous Capture
 ///
 /// This type uses Tokio's blocking task to run a libpcap capture loop.
 #[derive(Debug)]
 pub struct AsyncCapture {
-    rx: mpsc::UnboundedReceiver<crate::Result<OwnedPacket>>,
+    rx: mpsc::UnboundedReceiver<crate::Result<Packet<'static>>>,
 }
 
 impl AsyncCapture {
@@ -30,7 +29,7 @@ impl AsyncCapture {
 }
 
 impl Future for AsyncCapture {
-    type Output = crate::Result<OwnedPacket>;
+    type Output = crate::Result<Packet<'static>>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         match self.rx.poll_recv(cx) {
@@ -42,14 +41,14 @@ impl Future for AsyncCapture {
 }
 
 impl Stream for AsyncCapture {
-    type Item = crate::Result<OwnedPacket>;
+    type Item = crate::Result<Packet<'static>>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         self.poll(cx).map(Option::Some)
     }
 }
 
-fn capture_loop(pcap: crate::Pcap, tx: UnboundedSender<crate::Result<OwnedPacket>>) {
+fn capture_loop(pcap: crate::Pcap, tx: UnboundedSender<crate::Result<Packet<'static>>>) {
     loop {
         match next_packet(&pcap) {
             Poll::Pending => continue,
@@ -66,9 +65,9 @@ fn capture_loop(pcap: crate::Pcap, tx: UnboundedSender<crate::Result<OwnedPacket
     }
 }
 
-fn next_packet(pcap: &crate::Pcap) -> Poll<crate::Result<OwnedPacket>> {
+fn next_packet(pcap: &crate::Pcap) -> Poll<crate::Result<Packet<'static>>> {
     match libpcap::pcap_next_ex(&pcap.pcap_t) {
-        Ok(p) => Poll::Ready(Ok(p.into())),
+        Ok(p) => Poll::Ready(Ok(p.to_owned())),
         Err(e) if e == Error::Timeout => Poll::Pending,
         Err(e) => Poll::Ready(Err(e)),
     }

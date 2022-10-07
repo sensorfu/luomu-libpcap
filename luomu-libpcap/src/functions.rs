@@ -12,6 +12,7 @@
 //! Log level of "trace" (see <https://docs.rs/log/>) is used to log invocations
 //! of these functions.
 
+use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::ffi::{c_void, CStr, CString};
 use std::mem::MaybeUninit;
@@ -322,7 +323,7 @@ pub fn pcap_freecode(pcap_filter: PcapFilter) {
 /// If data is needed, copy it before calling this again.
 ///
 /// <https://www.tcpdump.org/manpages/pcap_next_ex.3pcap.html>
-pub fn pcap_next_ex(pcap_t: &PcapT) -> Result<Packet> {
+pub fn pcap_next_ex<'a>(pcap_t: &PcapT) -> Result<Packet<'a>> {
     trace!("pcap_next_ex({:p})", pcap_t.pcap_t);
     let mut header: *mut libpcap::pcap_pkthdr = std::ptr::null_mut();
     let mut packet: *const libc::c_uchar = std::ptr::null();
@@ -346,11 +347,11 @@ pub fn pcap_next_ex(pcap_t: &PcapT) -> Result<Packet> {
     let len: usize = unsafe { (*header).caplen } as usize;
 
     let timestamp = UNIX_EPOCH + Duration::new(ts.tv_sec as u64, (ts.tv_usec as u32) * 1000);
+    let slice = unsafe { std::slice::from_raw_parts(packet, len) };
 
     Ok(Packet {
         timestamp,
-        ptr: packet,
-        len,
+        packet: Cow::Borrowed(slice),
     })
 }
 
