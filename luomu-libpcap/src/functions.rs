@@ -21,12 +21,12 @@ use std::time::{Duration, UNIX_EPOCH};
 
 use log::trace;
 
-use crate::{Address, MacAddr};
+use crate::{Address, BorrowedPacket, MacAddr};
 use luomu_libpcap_sys as libpcap;
 
 use super::{
-    AddressIter, Error, Interface, InterfaceAddress, InterfaceFlag, Packet, PcapFilter, PcapIfT,
-    PcapStat, PcapT, Result,
+    AddressIter, Error, Interface, InterfaceAddress, InterfaceFlag, PcapFilter, PcapIfT, PcapStat,
+    PcapT, Result,
 };
 
 // libpcap doesn't have constant for success, but man pages state 0 is success.
@@ -320,7 +320,7 @@ pub fn pcap_freecode(pcap_filter: PcapFilter) {
 /// If data is needed, copy it before calling this again.
 ///
 /// <https://www.tcpdump.org/manpages/pcap_next_ex.3pcap.html>
-pub fn pcap_next_ex(pcap_t: &PcapT) -> Result<Packet> {
+pub fn pcap_next_ex(pcap_t: &PcapT) -> Result<BorrowedPacket> {
     trace!("pcap_next_ex({:p})", pcap_t.pcap_t);
     let mut header: *mut libpcap::pcap_pkthdr = std::ptr::null_mut();
     let mut packet: *const libc::c_uchar = std::ptr::null();
@@ -345,11 +345,7 @@ pub fn pcap_next_ex(pcap_t: &PcapT) -> Result<Packet> {
 
     let timestamp = UNIX_EPOCH + Duration::new(ts.tv_sec as u64, (ts.tv_usec as u32) * 1000);
 
-    Ok(Packet {
-        timestamp,
-        ptr: packet,
-        len,
-    })
+    Ok(BorrowedPacket::new(timestamp, packet, len))
 }
 
 /// open a fake `PcapT` for compiling filters

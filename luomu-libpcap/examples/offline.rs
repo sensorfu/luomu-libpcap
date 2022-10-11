@@ -1,6 +1,7 @@
 use std::env;
 
-use luomu_libpcap::Pcap;
+use luomu_libpcap::{Packet, Pcap};
+
 fn main() {
     env_logger::init();
     let fname = match env::args().nth(1) {

@@ -4,7 +4,7 @@ use std::time::Duration;
 use futures_util::TryStreamExt;
 
 use luomu_libpcap::tokio as tokio_capture;
-use luomu_libpcap::Pcap;
+use luomu_libpcap::{Packet, Pcap};
 
 fn main() -> Result<()> {
     env_logger::init();
