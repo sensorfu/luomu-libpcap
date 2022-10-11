@@ -1,4 +1,4 @@
-use luomu_libpcap::{Pcap, Result};
+use luomu_libpcap::{Packet, Pcap, Result};
 
 fn main() -> Result<()> {
     env_logger::init();

@@ -34,7 +34,7 @@ use std::net::IpAddr;
 use std::ops::Deref;
 use std::path::Path;
 use std::result;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
 use luomu_common::{Address, MacAddr};
 use luomu_libpcap_sys as libpcap;
@@ -44,6 +44,9 @@ use functions::*;
 
 mod error;
 pub use error::Error;
+
+mod packet;
+pub use packet::{BorrowedPacket, OwnedPacket, Packet};
 
 #[cfg(feature = "async-tokio")]
 pub mod tokio;
@@ -325,7 +328,7 @@ impl<'p> PcapIter<'p> {
 }
 
 impl<'p> Iterator for PcapIter<'p> {
-    type Item = Packet;
+    type Item = BorrowedPacket;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -377,103 +380,6 @@ impl PcapStat {
     /// Return number of packets dropped by the network interface or its driver.
     pub fn packets_dropped_interface(&self) -> u32 {
         self.stats.ps_ifdrop
-    }
-}
-
-/// A network packet captured by libpcap.
-///
-/// This struct contains memory owned by `libpcap`. Copy the contents out before
-/// getting next `Packet` from `libpcap`.
-pub struct Packet {
-    timestamp: SystemTime,
-    ptr: *const libc::c_uchar,
-    len: usize,
-}
-
-impl Packet {
-    /// get a timestamp of a packet
-    ///
-    /// When capturing traffic, each packet is given a timestamp representing
-    /// the arrival time of the packet. This time is an approximation.
-    ///
-    /// <https://www.tcpdump.org/manpages/pcap-tstamp.7.html>
-    pub fn timestamp(&self) -> SystemTime {
-        self.timestamp
-    }
-
-    /// Get the contents of a packet.
-    pub fn packet(&self) -> &[u8] {
-        unsafe { std::slice::from_raw_parts(self.ptr, self.len) }
-    }
-
-    /// Get the contents of a packet as `Bytes`. This makes a copy of the data.
-    #[cfg(feature = "bytes")]
-    pub fn packet_bytes(&self) -> bytes::Bytes {
-        bytes::Bytes::copy_from_slice(self.packet())
-    }
-
-    /// Length of captured packet.
-    ///
-    /// Packet should always have some bytes so length is never zero.
-    pub fn len(&self) -> usize {
-        self.len
-    }
-
-    /// The packet is never empty. But you might want to make sure.
-    pub fn is_empty(&self) -> bool {
-        self.len == 0
-    }
-}
-
-/// A Packet from network capture. This type owns the packet content so at least
-/// one copy of the data has been done constructing this.
-#[derive(Debug)]
-pub struct OwnedPacket {
-    packet: Vec<u8>,
-    timestamp: SystemTime,
-}
-
-impl OwnedPacket {
-    /// get a timestamp of a packet
-    ///
-    /// When capturing traffic, each packet is given a timestamp representing
-    /// the arrival time of the packet. This time is an approximation.
-    ///
-    /// <https://www.tcpdump.org/manpages/pcap-tstamp.7.html>
-    pub fn timestamp(&self) -> SystemTime {
-        self.timestamp
-    }
-
-    /// Get the contents of a packet.
-    pub fn packet(&self) -> &[u8] {
-        &self.packet
-    }
-
-    /// Get the contents of a packet  as `Bytes` without copying.
-    #[cfg(feature = "bytes")]
-    pub fn packet_bytes(self) -> bytes::Bytes {
-        bytes::Bytes::from(self.packet)
-    }
-
-    /// Length of captured packet.
-    ///
-    /// Packet should always have some bytes so length is never zero.
-    pub fn len(&self) -> usize {
-        self.packet.len()
-    }
-
-    /// The packet is never empty. But you might want to make sure.
-    pub fn is_empty(&self) -> bool {
-        self.packet.is_empty()
-    }
-}
-
-impl From<Packet> for OwnedPacket {
-    fn from(p: Packet) -> Self {
-        Self {
-            packet: p.packet().to_vec(),
-            timestamp: p.timestamp(),
-        }
     }
 }
 
