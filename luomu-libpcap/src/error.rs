@@ -3,7 +3,7 @@ use std::fmt;
 use std::io;
 
 /// Errors produced by luomu-libpcap.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Error {
     /// Loop terminated by pcap_breakloop (PCAP_ERROR_BREAK).
     Break,
@@ -48,7 +48,7 @@ pub enum Error {
     CStringError(CStringError),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum CStringError {
     Utf8(std::str::Utf8Error),
     Nul(std::ffi::NulError),

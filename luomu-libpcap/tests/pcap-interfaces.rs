@@ -18,8 +18,7 @@ fn test_find_localhost() -> Result<()> {
             return Ok(());
         }
     }
-    assert!(false, "Couldn't find localhost");
-    unreachable!("execution shouldn't get here")
+    panic!("Couldn't find localhost");
 }
 
 #[test]

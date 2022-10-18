@@ -15,7 +15,7 @@ fn main() {
     for (count, pkt) in pcap.capture().enumerate() {
         let packet = pkt.packet();
         let mut hex = String::new();
-        for i in 0..packet.len() {
+        for (i, _) in packet.iter().enumerate() {
             if i % 4 == 0 {
                 hex.push(' ');
             }
