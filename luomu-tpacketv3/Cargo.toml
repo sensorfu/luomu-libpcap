@@ -19,5 +19,5 @@ log = { version = "0.4", default-features = false }
 luomu-libpcap = { path = "../luomu-libpcap/" }
 
 [dev-dependencies]
-clap = "4"
+clap = { version = "4", features = [ "derive" ] }
 env_logger = {version = "0.9", default-features = false }

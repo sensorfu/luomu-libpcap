@@ -1,6 +1,7 @@
 #[cfg(target_os = "linux")]
 mod linux {
 
+    use clap::Parser;
     use luomu_tpacketv3 as tpacketv3;
     use std::sync::atomic::AtomicBool;
     use std::sync::mpsc;
@@ -103,78 +104,51 @@ mod linux {
         }
     }
 
+    #[derive(Parser)]
+    struct Args {
+        /// Name of the capture interface
+        #[arg(short, long)]
+        interface: String,
+
+        /// Number of seconds to listen for traffic
+        #[arg(short, long, default_value_t = 10)]
+        duration: u64,
+
+        /// Number of blocks to allocate for reader
+        #[arg(short, long, default_value_t = 32)]
+        blocks: u32,
+
+        /// Size of block (needs to be multiple of 4096)
+        #[arg(short = 's', long, default_value_t = 2097152)]
+        blocksize: u32,
+
+        /// Number of worker threads to run
+        #[arg(short, long, default_value_t = 1)]
+        workers: u32,
+
+        /// Fanout mode to set
+        #[arg(short, long)]
+        fanout: Option<String>,
+
+        /// ID of the fanout group
+        #[arg(short, long)]
+        groupid: Option<u16>,
+    }
+
     pub fn main() {
         env_logger::init();
 
-        let matches = clap::App::new("tpacket-demo")
-            .arg(
-                clap::Arg::with_name("interface")
-                    .short("i")
-                    .long("interface")
-                    .takes_value(true)
-                    .required(true)
-                    .help("Name of the capture interface"),
-            )
-            .arg(
-                clap::Arg::with_name("duration")
-                    .short("d")
-                    .long("duration")
-                    .takes_value(true)
-                    .default_value("10")
-                    .help("Number of seconds to listen for traffic"),
-            )
-            .arg(
-                clap::Arg::with_name("blocks")
-                    .short("b")
-                    .long("blocks")
-                    .takes_value(true)
-                    .default_value("32")
-                    .help("Number of blocks to allocate for reader"),
-            )
-            .arg(
-                clap::Arg::with_name("blocksize")
-                    .short("s")
-                    .long("blocksize")
-                    .takes_value(true)
-                    .default_value("2097152")
-                    .help("Size of block (needs to be multiple of 4096)"),
-            )
-            .arg(
-                clap::Arg::with_name("workers")
-                    .short("w")
-                    .long("workers")
-                    .takes_value(true)
-                    .default_value("1")
-                    .help("Number of worker threads to run"),
-            )
-            .arg(
-                clap::Arg::with_name("fanout")
-                    .short("f")
-                    .long("fanout")
-                    .takes_value(true)
-                    .help("Fanout mode to set"),
-            )
-            .arg(
-                clap::Arg::with_name("group")
-                    .short("g")
-                    .long("groupid")
-                    .takes_value(true)
-                    .help("ID of the fanout group"),
-            )
-            .get_matches();
+        let cli = Args::parse();
 
-        let read_time: Duration =
-            Duration::from_secs(matches.value_of("duration").unwrap().parse().unwrap());
+        let read_time: Duration = Duration::from_secs(cli.duration);
+        let blocksize: u32 = cli.blocksize;
+        let blocks: u32 = cli.blocks;
+        let ifname = cli.interface;
+        let workers: u32 = cli.workers;
+        let groupid: u16 = cli.groupid.unwrap_or(1001);
 
-        let blocksize: u32 = matches.value_of("blocksize").unwrap().parse().unwrap();
-        let blocks: u32 = matches.value_of("blocks").unwrap().parse().unwrap();
-        let ifname = matches.value_of("interface").unwrap().to_owned();
-        let workers: u32 = matches.value_of("workers").unwrap().parse().unwrap();
-
-        let groupid: u16 = matches.value_of("group").unwrap_or("1001").parse().unwrap();
-
-        let fanout_mode = if let Some(v) = matches.value_of("fanout") {
-            match v {
+        let fanout_mode = if let Some(v) = cli.fanout {
+            match &*v {
                 "hash" => Some(tpacketv3::FanoutMode::HASH(groupid)),
                 "lb" => Some(tpacketv3::FanoutMode::LB(groupid)),
                 "qm" => Some(tpacketv3::FanoutMode::QM(groupid)),
@@ -223,6 +197,7 @@ mod linux {
         debug!("Done");
     }
 }
+
 #[cfg(target_os = "linux")]
 #[macro_use]
 extern crate log;
