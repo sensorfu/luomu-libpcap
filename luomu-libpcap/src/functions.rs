@@ -124,8 +124,7 @@ pub fn pcap_set_buffer_size(pcap_t: &PcapT, buffer_size: usize) -> Result<()> {
 /// <https://www.tcpdump.org/manpages/pcap_set_promisc.3pcap.html>
 pub fn pcap_set_promisc(pcap_t: &PcapT, promiscuous: bool) -> Result<()> {
     trace!("pcap_set_promisc({:p}, {})", pcap_t.pcap_t, promiscuous);
-    let promisc = if promiscuous { 1 } else { 0 };
-    let ret = unsafe { libpcap::pcap_set_promisc(pcap_t.pcap_t, promisc) };
+    let ret = unsafe { libpcap::pcap_set_promisc(pcap_t.pcap_t, promiscuous.into()) };
     check_pcap_error(pcap_t, ret)
 }
 
@@ -154,8 +153,7 @@ pub fn pcap_set_immediate_mode(pcap_t: &PcapT, immediate: bool) -> Result<()> {
         pcap_t.pcap_t,
         immediate
     );
-    let immediate = if immediate { 1 } else { 0 };
-    let ret = unsafe { libpcap::pcap_set_immediate_mode(pcap_t.pcap_t, immediate) };
+    let ret = unsafe { libpcap::pcap_set_immediate_mode(pcap_t.pcap_t, immediate.into()) };
     check_pcap_error(pcap_t, ret)
 }
 

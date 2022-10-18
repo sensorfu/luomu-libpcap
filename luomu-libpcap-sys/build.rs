@@ -56,10 +56,10 @@ fn compile(out_dir: &str, source_dir: &Path) -> io::Result<()> {
     // panic!("cc = {}", cc);
 
     let output = Command::new(source_dir.join("configure"))
-        .current_dir(&source_dir)
+        .current_dir(source_dir)
         .arg(format!("CC={}", cc))
         .arg("--prefix")
-        .arg(&out_dir)
+        .arg(out_dir)
         .arg("--disable-universal")
         .arg("--enable-shared=no")
         .arg("--enable-usb=no")
@@ -77,7 +77,7 @@ fn compile(out_dir: &str, source_dir: &Path) -> io::Result<()> {
     }
 
     let output = Command::new("make")
-        .current_dir(&source_dir)
+        .current_dir(source_dir)
         .arg(j_arg)
         .output()?;
     if !output.status.success() {
@@ -89,7 +89,7 @@ fn compile(out_dir: &str, source_dir: &Path) -> io::Result<()> {
     }
 
     Command::new("make")
-        .current_dir(&source_dir)
+        .current_dir(source_dir)
         .arg("install")
         .output()?;
 

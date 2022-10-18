@@ -16,7 +16,7 @@ fn main() -> Result<()> {
     for packet in pcap.capture() {
         let packet = packet.packet();
         let mut hex = String::new();
-        for i in 0..packet.len() {
+        for (i, _) in packet.iter().enumerate() {
             if i % 4 == 0 {
                 hex.push(' ');
             }
@@ -28,14 +28,13 @@ fn main() -> Result<()> {
         count += 1;
         println!("{}", hex);
         if count % 100 == 0 && count != 0 {
-            match pcap.stats() {
-                Ok(stats) => println!(
+            if let Ok(stats) = pcap.stats() {
+                println!(
                     "\nStats: received: {} packets, dropped: {} packets, dropped on interface {} packets",
                     stats.packets_received(),
                     stats.packets_dropped(),
                     stats.packets_dropped_interface()
-                ),
-                Err(_) => {}
+                );
             }
         }
     }
