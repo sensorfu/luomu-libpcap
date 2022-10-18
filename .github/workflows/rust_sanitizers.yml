@@ -7,7 +7,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-18.04, macos-latest]
+        os: [ubuntu-latest, macos-latest]
         sanitizer: [address, leak]
 
     steps:
@@ -23,8 +23,8 @@ jobs:
           toolchain: nightly
           override: true
 
-      - uses: actions-rs/cargo@v1
+      - name: Run sanitizer
         env:
           RUSTFLAGS: -Z sanitizer=${{ matrix.sanitizer }}
-        with:
-          command: test
+        run: |
+          cargo test --target $(rustc -vV | awk '/^host: / { print $2 }')
