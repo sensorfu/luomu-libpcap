@@ -1,4 +1,4 @@
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::str::FromStr;
 
@@ -11,51 +11,52 @@ use super::InvalidAddress;
 /// address to reside in lowest 6 bytes. All `From<MacAddr>` and
 /// `TryFrom<MacAddr>` implementations return their bytes as big endian.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct MacAddr([u8; 6]);
+pub struct MacAddr(u64);
+
+impl MacAddr {
+    /// A unspecified MAC address (00:00:00:00:00:00)
+    pub const UNSPECIFIED: MacAddr = MacAddr(0);
+
+    /// A broadcast MAC address (FF:FF:FF:FF:FF:FF)
+    pub const BROADCAST: MacAddr = MacAddr(0x0000FFFFFFFFFFFF);
+
+    /// Return MAC address as bytearray in big endian order.
+    pub fn as_array(&self) -> [u8; 6] {
+        u64::from(self).to_be_bytes()[2..=7].try_into().unwrap()
+    }
+}
 
 impl MacAddr {
     /// Checks if this address is unspecified (`00:00:00:00:00:00`) address.
-    pub fn is_unspecified(&self) -> bool {
-        self.0 == [0; 6]
+    pub const fn is_unspecified(&self) -> bool {
+        self.0 & 0x0000FFFFFFFFFFFF == 0
     }
 
-    /// Checks if this address is multicast address.
+    /// Checks if this address is a multicast address.
     pub const fn is_multicast(&self) -> bool {
         // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast_(I/G_bit)
         // The least significant bit of an address's first octet is referred to
         // as the I/G, or Individual/Group, bit. When this bit is 0 (zero),
         // the frame is meant to reach only one receiving NIC
-        (self.0[0] & 0x01) == 0x01
+        ((self.0 >> 40) & 0x01) == 0x01
     }
 }
 
 impl From<[u8; 6]> for MacAddr {
-    fn from(val: [u8; 6]) -> Self {
-        Self(val)
+    fn from(v: [u8; 6]) -> Self {
+        Self::from(&v)
     }
 }
 
 impl From<&[u8; 6]> for MacAddr {
-    fn from(val: &[u8; 6]) -> Self {
-        Self(val.to_owned())
-    }
-}
-
-impl From<MacAddr> for [u8; 6] {
-    fn from(val: MacAddr) -> Self {
-        val.0
-    }
-}
-
-impl<'a> From<&'a MacAddr> for &'a [u8; 6] {
-    fn from(val: &'a MacAddr) -> Self {
-        &val.0
-    }
-}
-
-impl<'a> From<&'a MacAddr> for &'a [u8] {
-    fn from(val: &'a MacAddr) -> Self {
-        &val.0
+    fn from(v: &[u8; 6]) -> Self {
+        let r = (u64::from(v[0]) << 40)
+            + (u64::from(v[1]) << 32)
+            + (u64::from(v[2]) << 24)
+            + (u64::from(v[3]) << 16)
+            + (u64::from(v[4]) << 8)
+            + u64::from(v[5]);
+        Self(r)
     }
 }
 
@@ -67,8 +68,31 @@ impl TryFrom<u64> for MacAddr {
             return Err(InvalidAddress);
         }
 
-        let b = mac.to_be_bytes();
-        Ok(MacAddr([b[2], b[3], b[4], b[5], b[6], b[7]]))
+        Ok(Self(mac))
+    }
+}
+
+impl From<MacAddr> for u64 {
+    fn from(mac: MacAddr) -> Self {
+        mac.0
+    }
+}
+
+impl From<&MacAddr> for u64 {
+    fn from(mac: &MacAddr) -> Self {
+        mac.0
+    }
+}
+
+impl From<MacAddr> for [u8; 6] {
+    fn from(mac: MacAddr) -> Self {
+        mac.as_array()
+    }
+}
+
+impl From<&MacAddr> for [u8; 6] {
+    fn from(mac: &MacAddr) -> Self {
+        mac.as_array()
     }
 }
 
@@ -76,18 +100,21 @@ impl FromStr for MacAddr {
     type Err = InvalidAddress;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.is_empty() || s.len() > 17 {
-            return Err(InvalidAddress);
-        }
-        let parts = s.split(':').collect::<Vec<&str>>();
-        if parts.len() != 6 {
-            return Err(InvalidAddress);
-        }
-        let mut val = [0u8; 6];
-        for (idx, v) in parts.iter().take(6).enumerate() {
-            val[idx] = u8::from_str_radix(v, 16).map_err(|_e| InvalidAddress {})?;
-        }
-        Ok(MacAddr(val))
+        s.splitn(6, ":")
+            .filter(|s| s.len() == 2)
+            .filter(|s| s.chars().all(|c| c.is_ascii_hexdigit()))
+            .map(|v| u8::from_str_radix(v, 16).ok())
+            .enumerate()
+            .try_fold(([0u8; 6], 0), |(mut addr, _), (i, v)| {
+                addr[i] = v?;
+                Some((addr, i))
+            })
+            .map_or(Err(InvalidAddress), |(val, i)| {
+                match i {
+                    5 => Ok(MacAddr::from(val)),
+                    _ => Err(InvalidAddress),
+                }
+            })
     }
 }
 
@@ -99,23 +126,20 @@ impl TryFrom<&str> for MacAddr {
     }
 }
 
-impl fmt::Debug for MacAddr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self)
-    }
-}
-
 impl fmt::Display for MacAddr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let h = self.0.map(|b| format!("{:02x}", b)).join(":");
+        let h = self.as_array()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<Box<[String]>>()
+            .join(":");
         f.write_str(&h)
     }
 }
 
-impl std::ops::Deref for MacAddr {
-    type Target = [u8; 6];
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl fmt::Debug for MacAddr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "MacAddr({})", self)
     }
 }
 
@@ -131,7 +155,15 @@ mod tests {
     fn test_fmt_debug() {
         let mac: MacAddr = [0x00, 0xff, 0x11, 0xee, 0x22, 0xdd].into();
         let debug = format!("{:?}", mac);
-        assert_eq!(&debug, "00:ff:11:ee:22:dd");
+        assert_eq!(&debug, "MacAddr(00:ff:11:ee:22:dd)");
+    }
+
+    #[test]
+    fn test_mac_to_array() {
+        let slice = [0x00, 0xff, 0x11, 0xee, 0x22, 0xdd];
+        let mac: MacAddr = slice.into();
+        let array: [u8; 6] = mac.into();
+        assert_eq!(slice, array);
     }
 
     #[test]
@@ -153,8 +185,8 @@ mod tests {
     fn test_try_from_u64_byteoder() {
         let i = 0x0000123456789ABC;
         let mac = MacAddr::try_from(i).unwrap();
-        let b: &[u8] = (&mac).into();
-        assert_eq!(b, &[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]);
+        let b: [u8; 6] = mac.as_array();
+        assert_eq!(&b, &[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]);
     }
 
     #[test]
@@ -177,14 +209,12 @@ mod tests {
         assert!(MacAddr::try_from("00:11:22:33:44:55:66:77").is_err()); // long
         assert!(MacAddr::try_from("00:11:22:zz:44:55").is_err()); // invalid bytes
         assert!(MacAddr::try_from("00::22:33:44:55").is_err()); // omitted value
-    }
-    #[test]
-    fn test_parse_invalid() {
-        assert!("".parse::<MacAddr>().is_err());
-        assert!("00:11".parse::<MacAddr>().is_err()); // short
-        assert!("00:11:22:33:44:55:66:77".parse::<MacAddr>().is_err()); // long
-        assert!("00:11:22:zz:44:55".parse::<MacAddr>().is_err()); // invalid bytes
-        assert!("00::22:33:44:55".parse::<MacAddr>().is_err()); // omitted value
+
+        assert!(MacAddr::try_from("00:11:22:033:44:FF").is_err());
+        assert!(MacAddr::try_from("00:11:22:+33:44:FF").is_err());
+        assert!(MacAddr::try_from("00:11:22:-33:44:FF").is_err());
+        assert!(MacAddr::try_from("00:11:22:+3:44:FF").is_err());
+        assert!(MacAddr::try_from("00:11:22:-3:44:FF").is_err());
     }
 
     #[test]
@@ -217,9 +247,9 @@ mod tests {
 
     quickcheck! {
         fn prop_macaddr_to_from(xs: (u8, u8, u8, u8, u8, u8)) -> bool {
-            let b1 = &[xs.0, xs.1, xs.2, xs.3, xs.4, xs.5];
+            let b1: [u8; 6] = [xs.0, xs.1, xs.2, xs.3, xs.4, xs.5];
             let mac = MacAddr::from(b1);
-            let b2: &[u8] = (&mac).into();
+            let b2: [u8; 6] = mac.into();
             b1 == b2
         }
     }
