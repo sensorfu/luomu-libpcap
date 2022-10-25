@@ -15,6 +15,11 @@ pub struct MacAddr(u64);
 impl MacAddr {
     /// A broadcast MAC address (FF:FF:FF:FF:FF:FF)
     pub const BROADCAST: MacAddr = MacAddr(0x0000FFFFFFFFFFFF);
+
+    /// Return MAC address as bytearray in big endian order.
+    pub fn as_array(&self) -> [u8; 6] {
+        u64::from(self).to_be_bytes()[2..=7].try_into().unwrap()
+    }
 }
 
 impl From<[u8; 6]> for MacAddr {
@@ -61,13 +66,13 @@ impl From<&MacAddr> for u64 {
 
 impl From<MacAddr> for [u8; 6] {
     fn from(mac: MacAddr) -> Self {
-        (&mac).into()
+        mac.as_array()
     }
 }
 
 impl From<&MacAddr> for [u8; 6] {
     fn from(mac: &MacAddr) -> Self {
-        u64::from(mac).to_be_bytes()[2..=7].try_into().unwrap()
+        mac.as_array()
     }
 }
 
@@ -125,7 +130,7 @@ mod tests {
     fn test_try_from_u64_byteoder() {
         let i = 0x0000123456789ABC;
         let mac = MacAddr::try_from(i).unwrap();
-        let b: [u8; 6] = mac.into();
+        let b: [u8; 6] = mac.as_array();
         assert_eq!(&b, &[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]);
     }
 
