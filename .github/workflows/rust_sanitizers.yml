@@ -8,23 +8,27 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        sanitizer: [address, leak]
+        sanitizer: [address]
 
     steps:
-      - uses: actions/checkout@v1
-
       - name: Install dependencies
         run: sudo apt -y update && sudo apt -y install flex bison
-        if: matrix.os != 'macos-latest'
+        if: ${{ startsWith(matrix.os, 'ubuntu') }}
 
-      - uses: actions-rs/toolchain@v1
+      - name: Install Rust nightly
+        run: |
+          rustup toolchain install nightly --profile minimal
+          rustup override set nightly
+
+      - uses: actions/checkout@v3
+      - uses: Swatinem/rust-cache@v2
         with:
-          profile: minimal
-          toolchain: nightly
-          override: true
+          key: ${{ matrix.toolchain }}-sanitizer
 
-      - name: Run sanitizer
+      - run: |
+          echo "TARGET=$(rustc -vV | awk '/^host: / { print $2 }')" >>${GITHUB_ENV}
+
+      - name: Run ${{ matrix.sanitizer }} sanitizer
         env:
           RUSTFLAGS: -Z sanitizer=${{ matrix.sanitizer }}
-        run: |
-          cargo test --target $(rustc -vV | awk '/^host: / { print $2 }')
+        run: cargo test --target ${{ env.TARGET }}

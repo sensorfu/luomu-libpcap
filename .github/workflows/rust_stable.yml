@@ -5,30 +5,15 @@ name: Rust Stable CI
 jobs:
   ci:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        rust:
-          - stable
-
     steps:
-      - uses: actions/checkout@v1
-
       - name: Install dependencies
         run: sudo apt -y update && sudo apt -y install flex bison
 
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
-          components: clippy
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal --component clippy rustfmt
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+      - uses: actions/checkout@v3
+      - uses: Swatinem/rust-cache@v2
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+      - run: cargo clippy -- -D warnings
+      - run: cargo fmt --all -- --check
