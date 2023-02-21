@@ -8,29 +8,26 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-20.04, ubuntu-22.04, macos-11, macos-12 ]
-        rust:
+        toolchain:
           - stable
           - beta
           - nightly
           - 1.60.0  # MSRV
 
     steps:
-      - uses: actions/checkout@v1
-
       - name: Install dependencies
         run: sudo apt -y update && sudo apt -y install flex bison
         if: ${{ startsWith(matrix.os, 'ubuntu') }}
 
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
+      - name: Install Rust ${{ matrix.toolchain }}
+        run: |
+          rustup toolchain install ${{ matrix.toolchain }} --profile minimal
+          rustup override set ${{ matrix.toolchain }}
 
-      - uses: actions-rs/cargo@v1
+      - uses: actions/checkout@v3
+      - uses: Swatinem/rust-cache@v2
         with:
-          command: build
+          key: ${{ matrix.toolchain }}-${{ matrix.os }}
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
+      - run: cargo check -v
+      - run: cargo test -v
