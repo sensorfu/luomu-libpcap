@@ -10,7 +10,7 @@
 
 //! # luomu-common
 //!
-//! Common types and functions for (low) level network programming.
+//! Common types and functions for (low level) network programming.
 
 use std::fmt;
 
@@ -19,6 +19,12 @@ pub use address::Address;
 
 mod macaddr;
 pub use macaddr::MacAddr;
+
+mod directed_addr;
+pub use directed_addr::{Destination, Source};
+
+mod addr_pair;
+pub use addr_pair::{AddrPair, IPPair, MacPair, PortPair};
 
 /// Invalid address error
 #[derive(Debug)]
