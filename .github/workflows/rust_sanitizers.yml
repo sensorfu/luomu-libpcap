@@ -17,18 +17,20 @@ jobs:
 
       - name: Install Rust nightly
         run: |
-          rustup toolchain install nightly --profile minimal
+          rustup toolchain install nightly --profile minimal --component rust-src
           rustup override set nightly
 
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
         with:
-          key: ${{ matrix.toolchain }}-sanitizer
+          key: ${{ matrix.toolchain }}-${{ matrix.os }}-${{ matrix.sanitizer }}-sanitizer
 
       - run: |
           echo "TARGET=$(rustc -vV | awk '/^host: / { print $2 }')" >>${GITHUB_ENV}
 
-      - name: Run ${{ matrix.sanitizer }} sanitizer
+      - name: Run ${{ matrix.sanitizer }} sanitizer for ${{ env.TARGET }}
         env:
           RUSTFLAGS: -Z sanitizer=${{ matrix.sanitizer }}
-        run: cargo test --target ${{ env.TARGET }}
+          RUSTDOCFLAGS: -Z sanitizer=${{ matrix.sanitizer }}
+          ASAN_OPTIONS: verbose=1:atexit=1:detect_stack_use_after_return=1:strict_string_checks=1
+        run: cargo test -Zbuild-std --target ${{ env.TARGET }}
