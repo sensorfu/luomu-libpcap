@@ -1,4 +1,4 @@
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::fmt;
 
 use super::InvalidAddress;
@@ -10,35 +10,33 @@ use super::InvalidAddress;
 /// address to reside in lowest 6 bytes. All `From<MacAddr>` and
 /// `TryFrom<MacAddr>` implementations return their bytes as big endian.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct MacAddr([u8; 6]);
+pub struct MacAddr(u64);
+
+impl MacAddr {
+    /// A broadcast MAC address (FF:FF:FF:FF:FF:FF)
+    pub const BROADCAST: MacAddr = MacAddr(0x0000FFFFFFFFFFFF);
+
+    /// Return MAC address as bytearray in big endian order.
+    pub fn as_array(&self) -> [u8; 6] {
+        u64::from(self).to_be_bytes()[2..=7].try_into().unwrap()
+    }
+}
 
 impl From<[u8; 6]> for MacAddr {
-    fn from(val: [u8; 6]) -> Self {
-        Self(val)
+    fn from(v: [u8; 6]) -> Self {
+        Self::from(&v)
     }
 }
 
 impl From<&[u8; 6]> for MacAddr {
-    fn from(val: &[u8; 6]) -> Self {
-        Self(val.to_owned())
-    }
-}
-
-impl From<MacAddr> for [u8; 6] {
-    fn from(val: MacAddr) -> Self {
-        val.0
-    }
-}
-
-impl<'a> From<&'a MacAddr> for &'a [u8; 6] {
-    fn from(val: &'a MacAddr) -> Self {
-        &val.0
-    }
-}
-
-impl<'a> From<&'a MacAddr> for &'a [u8] {
-    fn from(val: &'a MacAddr) -> Self {
-        &val.0
+    fn from(v: &[u8; 6]) -> Self {
+        let r = (u64::from(v[0]) << 40)
+            + (u64::from(v[1]) << 32)
+            + (u64::from(v[2]) << 24)
+            + (u64::from(v[3]) << 16)
+            + (u64::from(v[4]) << 8)
+            + u64::from(v[5]);
+        Self(r)
     }
 }
 
@@ -50,27 +48,43 @@ impl TryFrom<u64> for MacAddr {
             return Err(InvalidAddress);
         }
 
-        let b = mac.to_be_bytes();
-        Ok(MacAddr([b[2], b[3], b[4], b[5], b[6], b[7]]))
+        Ok(Self(mac))
+    }
+}
+
+impl From<MacAddr> for u64 {
+    fn from(mac: MacAddr) -> Self {
+        mac.0
+    }
+}
+
+impl From<&MacAddr> for u64 {
+    fn from(mac: &MacAddr) -> Self {
+        mac.0
+    }
+}
+
+impl From<MacAddr> for [u8; 6] {
+    fn from(mac: MacAddr) -> Self {
+        mac.as_array()
+    }
+}
+
+impl From<&MacAddr> for [u8; 6] {
+    fn from(mac: &MacAddr) -> Self {
+        mac.as_array()
     }
 }
 
 impl fmt::Debug for MacAddr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let h = self
-            .0
+        let b: [u8; 6] = self.into();
+        let h = b
             .iter()
             .map(|b| format!("{:02x}", b))
             .collect::<Vec<_>>()
             .join(":");
         f.write_str(&h)
-    }
-}
-
-impl std::ops::Deref for MacAddr {
-    type Target = [u8; 6];
-    fn deref(&self) -> &Self::Target {
-        &self.0
     }
 }
 
@@ -87,6 +101,14 @@ mod tests {
         let mac: MacAddr = [0x00, 0xff, 0x11, 0xee, 0x22, 0xdd].into();
         let debug = format!("{:?}", mac);
         assert_eq!(&debug, "00:ff:11:ee:22:dd");
+    }
+
+    #[test]
+    fn test_mac_to_array() {
+        let slice = [0x00, 0xff, 0x11, 0xee, 0x22, 0xdd];
+        let mac: MacAddr = slice.into();
+        let array: [u8; 6] = mac.into();
+        assert_eq!(slice, array);
     }
 
     #[test]
@@ -108,15 +130,15 @@ mod tests {
     fn test_try_from_u64_byteoder() {
         let i = 0x0000123456789ABC;
         let mac = MacAddr::try_from(i).unwrap();
-        let b: &[u8] = (&mac).into();
-        assert_eq!(b, &[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]);
+        let b: [u8; 6] = mac.as_array();
+        assert_eq!(&b, &[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]);
     }
 
     quickcheck! {
         fn prop_macaddr_to_from(xs: (u8, u8, u8, u8, u8, u8)) -> bool {
-            let b1 = &[xs.0, xs.1, xs.2, xs.3, xs.4, xs.5];
+            let b1: [u8; 6] = [xs.0, xs.1, xs.2, xs.3, xs.4, xs.5];
             let mac = MacAddr::from(b1);
-            let b2: &[u8] = (&mac).into();
+            let b2: [u8; 6] = mac.into();
             b1 == b2
         }
     }
