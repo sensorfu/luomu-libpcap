@@ -1,5 +1,7 @@
+use std::ops::{Deref, DerefMut};
+
 /// A `Source` of any kind. For example an IP address.
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Source<ADDR>(ADDR);
 
 impl<ADDR> Source<ADDR> {
@@ -19,8 +21,46 @@ impl<ADDR> Source<ADDR> {
     }
 }
 
+impl<ADDR> From<ADDR> for Source<ADDR> {
+    fn from(addr: ADDR) -> Self {
+        Self::new(addr)
+    }
+}
+
+impl<ADDR> From<Destination<ADDR>> for Source<ADDR> {
+    fn from(addr: Destination<ADDR>) -> Self {
+        addr.flip()
+    }
+}
+
+impl<ADDR> Deref for Source<ADDR> {
+    type Target = ADDR;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<ADDR> DerefMut for Source<ADDR> {
+    fn deref_mut(&mut self) -> &mut ADDR {
+        &mut self.0
+    }
+}
+
+impl<ADDR> AsRef<ADDR> for Source<ADDR> {
+    fn as_ref(&self) -> &ADDR {
+        &self.0
+    }
+}
+
+impl<ADDR> AsMut<ADDR> for Source<ADDR> {
+    fn as_mut(&mut self) -> &mut ADDR {
+        &mut self.0
+    }
+}
+
 /// A `Destination` of any kind. For example an IP address.
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Destination<ADDR>(ADDR);
 
 impl<ADDR> Destination<ADDR> {
@@ -37,6 +77,44 @@ impl<ADDR> Destination<ADDR> {
     /// Returns the underlying value inside `Destination`.
     pub fn unwrap(self) -> ADDR {
         self.0
+    }
+}
+
+impl<ADDR> From<ADDR> for Destination<ADDR> {
+    fn from(addr: ADDR) -> Self {
+        Self::new(addr)
+    }
+}
+
+impl<ADDR> From<Source<ADDR>> for Destination<ADDR> {
+    fn from(addr: Source<ADDR>) -> Self {
+        addr.flip()
+    }
+}
+
+impl<ADDR> Deref for Destination<ADDR> {
+    type Target = ADDR;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<ADDR> DerefMut for Destination<ADDR> {
+    fn deref_mut(&mut self) -> &mut ADDR {
+        &mut self.0
+    }
+}
+
+impl<ADDR> AsRef<ADDR> for Destination<ADDR> {
+    fn as_ref(&self) -> &ADDR {
+        &self.0
+    }
+}
+
+impl<ADDR> AsMut<ADDR> for Destination<ADDR> {
+    fn as_mut(&mut self) -> &mut ADDR {
+        &mut self.0
     }
 }
 
@@ -102,5 +180,24 @@ mod tests {
             (sa8.unwrap().ip(), sa8.unwrap().port()),
             (Ipv6Addr::UNSPECIFIED.into(), 42)
         );
+    }
+
+    #[test]
+    fn test_deref() {
+        let a = Source::new(Ipv4Addr::UNSPECIFIED);
+        assert_eq!(*a, Ipv4Addr::UNSPECIFIED);
+        assert!(a.is_unspecified());
+
+        let mut b = Source::new(Ipv4Addr::UNSPECIFIED);
+        *b = Ipv4Addr::BROADCAST.into();
+        assert_eq!(*b, Ipv4Addr::BROADCAST);
+        assert!(b.is_broadcast());
+    }
+
+    #[test]
+    fn test_no_copy_type() {
+        let hello: &str = "Hello World!";
+        let a: Source<&str> = hello.into();
+        assert_eq!(*a, hello);
     }
 }
