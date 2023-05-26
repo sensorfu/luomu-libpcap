@@ -14,18 +14,18 @@ bindgen \
     --distrust-clang-mangling \
     --use-core \
     --ctypes-prefix='libc' \
-    --whitelist-function='^pcap_.*' \
-    --whitelist-type='^pcap_.*' \
-    --whitelist-var='^PCAP_.*' \
-    --blacklist-type='^__.*' \
-    --blacklist-type='^sa_.*' \
-    --blacklist-type='^sockaddr' \
-    --blacklist-type='^size_t' \
-    --blacklist-type='^timeval' \
-    --blacklist-type='FILE' \
-    --blacklist-type='fpos_t' \
-    --blacklist-type='size_t' \
-    --blacklist-type='u_.*' \
+    --allowlist-function='^pcap_.*' \
+    --allowlist-type='^pcap_.*' \
+    --allowlist-var='^PCAP_.*' \
+    --blocklist-type='^__.*' \
+    --blocklist-type='^sa_.*' \
+    --blocklist-type='^sockaddr' \
+    --blocklist-type='^size_t' \
+    --blocklist-type='^timeval' \
+    --blocklist-type='FILE' \
+    --blocklist-type='fpos_t' \
+    --blocklist-type='size_t' \
+    --blocklist-type='u_.*' \
     -o src/pcap.rs \
     -- \
     -I"${DEST}/${LIBPCAP}"
