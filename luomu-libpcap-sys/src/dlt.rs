@@ -28,6 +28,7 @@ pub const DLT_IEEE802_11: u32 = 105;
 pub const DLT_FRELAY: u32 = 107;
 pub const DLT_LOOP: u32 = 108;
 pub const DLT_ENC: u32 = 109;
+pub const DLT_HDLC: u32 = 112;
 pub const DLT_LINUX_SLL: u32 = 113;
 pub const DLT_LTALK: u32 = 114;
 pub const DLT_ECONET: u32 = 115;
