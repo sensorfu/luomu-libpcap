@@ -7,7 +7,7 @@ use std::process::Command;
 use libflate::gzip::Decoder;
 use tar::Archive;
 
-static VERSION: &str = "1.10.1";
+static VERSION: &str = "1.10.4";
 
 fn main() -> io::Result<()> {
     let out_dir = env::var("OUT_DIR").expect("environment variable OUT_DIR");

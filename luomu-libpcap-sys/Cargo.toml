@@ -2,7 +2,7 @@
 name = "luomu-libpcap-sys"
 version = "0.1.0"
 authors = [ "Ossi Herrala <oherrala@iki.fi>" ]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 
 description = "Rusty libpcap bindings - The FFI layer"
