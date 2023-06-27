@@ -16,18 +16,17 @@ use std::collections::BTreeSet;
 use std::ffi::{c_void, CStr, CString};
 use std::mem::MaybeUninit;
 use std::net::{Ipv4Addr, Ipv6Addr};
+use std::os::fd::AsRawFd;
 use std::path::Path;
-use std::time::{Duration, UNIX_EPOCH};
 
 use log::trace;
 
-use crate::{Address, BorrowedPacket, MacAddr};
-use luomu_libpcap_sys as libpcap;
-
-use super::{
-    AddressIter, Error, Interface, InterfaceAddress, InterfaceFlag, PcapFilter, PcapIfT, PcapStat,
-    PcapT, Result,
+use crate::{
+    Address, AddressIter, BorrowedPacket, Error, Interface, InterfaceAddress, InterfaceFlag,
+    MacAddr, PcapDumper, PcapFilter, PcapIfT, PcapStat, PcapT, Result,
 };
+
+use luomu_libpcap_sys as libpcap;
 
 // libpcap doesn't have constant for success, but man pages state 0 is success.
 // For symmetry define it here together with PCAP_ERROR.
@@ -340,12 +339,7 @@ pub fn pcap_next_ex(pcap_t: &PcapT) -> Result<BorrowedPacket> {
         panic!("header or packet NULL.");
     }
 
-    let ts: libc::timeval = unsafe { std::mem::transmute((*header).ts) };
-    let len: usize = unsafe { (*header).caplen } as usize;
-
-    let timestamp = UNIX_EPOCH + Duration::new(ts.tv_sec as u64, (ts.tv_usec as u32) * 1000);
-
-    Ok(BorrowedPacket::new(timestamp, packet, len))
+    Ok(BorrowedPacket::new(header, packet))
 }
 
 /// open a fake `PcapT` for compiling filters
@@ -370,6 +364,83 @@ pub fn pcap_open_dead() -> Result<PcapT> {
         errbuf,
         interface: None,
     })
+}
+
+/// open a file to which to write packets
+///
+/// `pcap_dump_fopen()` is called to write data to an existing open file; The
+/// stream is assumed to be at the beginning of a file that has been newly
+/// created or truncated, so that writes will start at the beginning of the
+/// file.
+///
+/// <https://www.tcpdump.org/manpages/pcap_dump_open.3pcap.html>
+//
+// Rust compiler doesn't require it, but we want to take `&mut PcapDumper`
+// because we write into a file pointed by `PcapDumper`.
+#[allow(clippy::needless_pass_by_value)]
+pub fn pcap_dump_fopen(pcap_t: &PcapT, file: &mut std::fs::File) -> Result<PcapDumper> {
+    trace!("pcap_dump_fopen({:p}, {:?})", pcap_t.pcap_t, file);
+    let mode = b"wb\0";
+
+    let filedesc = unsafe { libc::fdopen(file.as_raw_fd(), mode.as_ptr() as *const libc::c_char) };
+    if filedesc.is_null() {
+        return Err(Error::IO(std::io::Error::last_os_error()));
+    }
+
+    let ret = unsafe { libpcap::pcap_dump_fopen(pcap_t.pcap_t, filedesc) };
+    if ret.is_null() {
+        return Err(get_error(pcap_t)?);
+    }
+
+    Ok(PcapDumper { pcap_dumper_t: ret })
+}
+
+/// flush to a savefile packets dumped
+///
+/// `pcap_dump_flush()` flushes the output buffer to the savefile, so that
+/// any packets written with pcap_dump(3PCAP) but not yet written to the
+/// savefile will be written.
+///
+/// <https://www.tcpdump.org/manpages/pcap_dump_flush.3pcap.html>
+//
+// Rust compiler doesn't require it, but we want to take `&mut PcapDumper`
+// because we write into a file pointed by `PcapDumper`.
+#[allow(clippy::needless_pass_by_value)]
+pub fn pcap_dump_flush(dumper: &mut PcapDumper) -> Result<()> {
+    trace!("pcap_dump_flush({:p})", dumper.pcap_dumper_t);
+    let ret = unsafe { libpcap::pcap_dump_flush(dumper.pcap_dumper_t) };
+    if ret == 0 {
+        Ok(())
+    } else {
+        // https://github.com/the-tcpdump-group/libpcap/blob/f828383609906455b9369b1ae86a75f0bd4ba374/sf-pcap.c#L1171C1-L1179
+        //
+        // pcap_dump_flush calls fflush() which sets errno so we can probably
+        // dig that error out.
+        Err(Error::IO(std::io::Error::last_os_error()))
+    }
+}
+
+/// write a packet to a capture file
+///
+/// `pcap_dump()` outputs a packet to the savefile opened with
+/// `pcap_dump_open()`. Note that its calling arguments are suitable for use
+/// with `pcap_dispatch()` or `pcap_loop`. If called directly, the user
+/// parameter is of type `pcap_dumper_t` as returned by `pcap_dump_open()`.
+///
+/// <https://www.tcpdump.org/manpages/pcap_dump.3pcap.html>
+//
+// Rust compiler doesn't require it, but we want to take `&mut PcapDumper`
+// because we write into a file pointed by `PcapDumper`.
+#[allow(clippy::needless_pass_by_value)]
+pub fn pcap_dump(dumper: &mut PcapDumper, pkthdr: &libpcap::pcap_pkthdr, bytes: &[u8]) {
+    trace!("pcap_dump({:p}, {:?})", dumper.pcap_dumper_t, pkthdr);
+    unsafe {
+        libpcap::pcap_dump(
+            dumper.pcap_dumper_t as *mut libc::c_uchar,
+            pkthdr,
+            bytes.as_ptr(),
+        )
+    }
 }
 
 /// get a list of capture devices

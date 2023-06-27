@@ -14,7 +14,7 @@ keywords = [ "pcap", "libpcap", "network" ]
 categories = [ "api-bindings", "external-ffi-bindings", "network-programming", "no-std" ]
 
 [dependencies]
-libc = "0.2"
+libc = { version = "0.2", features = [ "extra_traits" ] }
 
 [build-dependencies]
 cc = "1"

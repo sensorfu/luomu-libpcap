@@ -316,6 +316,31 @@ impl Drop for PcapFilter {
     }
 }
 
+/// A PcapDumper
+pub struct PcapDumper {
+    pcap_dumper_t: *mut libpcap::pcap_dumper_t,
+}
+
+impl PcapDumper {
+    /// Dump (save) a [Packet] to a savefile.
+    pub fn dump<P: Packet>(&mut self, packet: P) {
+        self.dump_raw(packet.pkthdr(), packet.packet())
+    }
+
+    /// Dump (save) a header and bytes to a savefile.
+    pub fn dump_raw(&mut self, pkthdr: &luomu_libpcap_sys::pcap_pkthdr, bytes: &[u8]) {
+        pcap_dump(self, pkthdr, bytes)
+    }
+}
+
+impl Drop for PcapDumper {
+    fn drop(&mut self) {
+        log::trace!("PcapDumper::drop({:p})", self.pcap_dumper_t);
+        _ = pcap_dump_flush(self);
+        unsafe { luomu_libpcap_sys::pcap_dump_close(self.pcap_dumper_t) }
+    }
+}
+
 /// Pcap capture iterator
 pub struct PcapIter<'p> {
     pcap_t: &'p PcapT,

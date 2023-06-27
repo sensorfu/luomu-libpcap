@@ -265,44 +265,20 @@ pub const PCAP_SAMP_FIRST_AFTER_N_MS: u32 = 2;
 pub type u_char = ::std::os::raw::c_uchar;
 pub type u_short = ::std::os::raw::c_ushort;
 pub type u_int = ::std::os::raw::c_uint;
-#[repr(C)]
-#[repr(align(8))]
-#[derive(Debug, Copy, Clone)]
-pub struct timeval {
-    pub _bindgen_opaque_blob: [u64; 2usize],
-}
-#[test]
-fn bindgen_test_layout_timeval() {
-    assert_eq!(
-        ::std::mem::size_of::<timeval>(),
-        16usize,
-        concat!("Size of: ", stringify!(timeval))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<timeval>(),
-        8usize,
-        concat!("Alignment of ", stringify!(timeval))
-    );
-}
-#[repr(C)]
-#[repr(align(1))]
-#[derive(Debug, Copy, Clone)]
-pub struct sockaddr {
-    pub _bindgen_opaque_blob: [u8; 16usize],
-}
-#[test]
-fn bindgen_test_layout_sockaddr() {
-    assert_eq!(
-        ::std::mem::size_of::<sockaddr>(),
-        16usize,
-        concat!("Size of: ", stringify!(sockaddr))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<sockaddr>(),
-        1usize,
-        concat!("Alignment of ", stringify!(sockaddr))
-    );
-}
+// #[repr(C)]
+// #[repr(align(8))]
+// #[derive(Debug, Copy, Clone)]
+// pub struct timeval {
+//     pub _bindgen_opaque_blob: [u64; 2usize],
+// }
+pub use libc::timeval;
+// #[repr(C)]
+// #[repr(align(1))]
+// #[derive(Debug, Copy, Clone)]
+// pub struct sockaddr {
+//     pub _bindgen_opaque_blob: [u8; 16usize],
+// }
+pub use libc::sockaddr;
 pub type bpf_int32 = ::std::os::raw::c_int;
 pub type bpf_u_int32 = u_int;
 #[repr(C)]
@@ -409,7 +385,8 @@ fn bindgen_test_layout_bpf_insn() {
         )
     );
 }
-pub type FILE = [u64; 19usize];
+// pub type FILE = [u64; 19usize];
+pub use libc::FILE;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct pcap {

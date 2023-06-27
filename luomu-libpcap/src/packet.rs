@@ -1,4 +1,6 @@
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use luomu_libpcap_sys::pcap_pkthdr;
 
 /// A trait for handling Borrowed and Owned Packet data from libpcap.
 pub trait Packet {
@@ -19,14 +21,13 @@ pub trait Packet {
     /// Length of captured packet.
     ///
     /// Packet should always have some bytes so length is never zero.
-    fn len(&self) -> usize {
-        self.packet().len()
-    }
+    fn len(&self) -> usize;
 
     /// The packet is never empty. But you might want to make sure.
-    fn is_empty(&self) -> bool {
-        self.packet().is_empty()
-    }
+    fn is_empty(&self) -> bool;
+
+    /// Return a reference to the [pcap_pkthdr] structure of a packet.
+    fn pkthdr(&self) -> &pcap_pkthdr;
 }
 
 /// A network packet with ownership of the underlying bytes.
@@ -35,13 +36,14 @@ pub trait Packet {
 /// contents in `Vec<u8>` without doing a copy.
 #[derive(Clone, Debug)]
 pub struct OwnedPacket {
-    timestamp: SystemTime,
+    header: pcap_pkthdr,
     packet: Vec<u8>,
 }
 
 impl Packet for OwnedPacket {
     fn timestamp(&self) -> SystemTime {
-        self.timestamp
+        let ts: libc::timeval = self.header.ts;
+        UNIX_EPOCH + Duration::new(ts.tv_sec as u64, (ts.tv_usec as u32) * 1000)
     }
 
     fn packet(&self) -> &[u8] {
@@ -50,6 +52,18 @@ impl Packet for OwnedPacket {
 
     fn to_vec(self) -> Vec<u8> {
         self.packet
+    }
+
+    fn len(&self) -> usize {
+        self.packet.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.packet.is_empty()
+    }
+
+    fn pkthdr(&self) -> &pcap_pkthdr {
+        &self.header
     }
 }
 
@@ -61,27 +75,21 @@ impl Packet for OwnedPacket {
 //
 /// If you want to keep the contents, make a `OwnedPacket` by calling
 /// `BorrowedPacket::to_owned()` before getting next `Packet` from `libpcap`.
-#[derive(Debug)]
 pub struct BorrowedPacket {
-    timestamp: SystemTime,
+    pkthdr: *const pcap_pkthdr,
     ptr: *const u8,
-    len: usize,
 }
 
 impl BorrowedPacket {
     /// Construct a new `BorrowedPacket`.
-    pub(crate) fn new(timestamp: SystemTime, ptr: *const u8, len: usize) -> Self {
-        BorrowedPacket {
-            timestamp,
-            ptr,
-            len,
-        }
+    pub(crate) fn new(pkthdr: *const pcap_pkthdr, ptr: *const u8) -> Self {
+        BorrowedPacket { pkthdr, ptr }
     }
 
     /// Copy the contents of `BorrowedPacket` and turn it into `OwnedPacket`.
     pub fn to_owned(self) -> OwnedPacket {
         OwnedPacket {
-            timestamp: self.timestamp,
+            header: unsafe { *(self.pkthdr) },
             packet: self.to_vec(),
         }
     }
@@ -89,15 +97,29 @@ impl BorrowedPacket {
 
 impl Packet for BorrowedPacket {
     fn timestamp(&self) -> SystemTime {
-        self.timestamp
+        let ts: libc::timeval = unsafe { (*self.pkthdr).ts };
+        UNIX_EPOCH + Duration::new(ts.tv_sec as u64, (ts.tv_usec as u32) * 1000)
     }
 
     fn packet(&self) -> &[u8] {
-        unsafe { std::slice::from_raw_parts(self.ptr, self.len) }
+        unsafe { std::slice::from_raw_parts(self.ptr, self.len()) }
     }
 
     fn to_vec(self) -> Vec<u8> {
         self.packet().to_vec()
+    }
+
+    fn len(&self) -> usize {
+        let len = unsafe { (*self.pkthdr).caplen };
+        len as usize
+    }
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    fn pkthdr(&self) -> &pcap_pkthdr {
+        unsafe { &*self.pkthdr }
     }
 }
 
@@ -109,59 +131,68 @@ impl From<BorrowedPacket> for OwnedPacket {
 
 #[cfg(test)]
 mod tests {
-    use std::time::SystemTime;
+    use std::time::{Duration, SystemTime};
 
-    use crate::{BorrowedPacket, OwnedPacket, Packet};
+    use luomu_libpcap_sys::pcap_pkthdr;
 
-    const TIMESTAMP: SystemTime = SystemTime::UNIX_EPOCH;
+    use crate::{BorrowedPacket, Packet};
+
     const BUF: &[u8] = b"Hello world";
-    const BORROWED_PACKET: BorrowedPacket = BorrowedPacket {
-        timestamp: TIMESTAMP,
-        ptr: BUF.as_ptr(),
-        len: BUF.len(),
+    const LEN: usize = BUF.len();
+    const TS: libc::timeval = libc::timeval {
+        tv_sec: 0,
+        tv_usec: 0,
     };
+    const PKTHDR: pcap_pkthdr = pcap_pkthdr {
+        ts: TS,
+        caplen: LEN as u32,
+        len: LEN as u32,
+    };
+
+    fn timestamp() -> SystemTime {
+        SystemTime::UNIX_EPOCH + Duration::new(TS.tv_sec as u64, 1000 * TS.tv_usec as u32)
+    }
+
+    fn borrowed_packet() -> BorrowedPacket {
+        BorrowedPacket {
+            pkthdr: &PKTHDR,
+            ptr: BUF.as_ptr(),
+        }
+    }
 
     #[test]
     fn test_packet_timestamp() {
-        assert_eq!(BORROWED_PACKET.timestamp(), TIMESTAMP);
-        assert_eq!(BORROWED_PACKET.to_owned().timestamp(), TIMESTAMP);
+        assert_eq!(borrowed_packet().timestamp(), timestamp());
+        assert_eq!(borrowed_packet().to_owned().timestamp(), timestamp());
     }
 
     #[test]
     fn test_packet_packet() {
-        assert_eq!(BORROWED_PACKET.packet(), BUF);
-        assert_eq!(BORROWED_PACKET.to_owned().packet(), BUF);
+        assert_eq!(borrowed_packet().packet(), BUF);
+        assert_eq!(borrowed_packet().to_owned().packet(), BUF);
     }
 
     #[test]
     fn test_packet_to_vec() {
-        assert_eq!(BORROWED_PACKET.to_vec(), Vec::from(BUF));
-        assert_eq!(BORROWED_PACKET.to_owned().to_vec(), Vec::from(BUF));
+        assert_eq!(borrowed_packet().to_vec(), Vec::from(BUF));
+        assert_eq!(borrowed_packet().to_owned().to_vec(), Vec::from(BUF));
     }
 
     #[test]
     fn test_packet_to_owned() {
-        let packet = BORROWED_PACKET.to_owned();
-        assert_eq!(packet.timestamp(), BORROWED_PACKET.timestamp());
-        assert_eq!(packet.packet(), BORROWED_PACKET.packet());
+        assert_eq!(borrowed_packet().timestamp(), borrowed_packet().timestamp());
+        assert_eq!(borrowed_packet().packet(), borrowed_packet().packet());
     }
 
     #[test]
     fn test_packet_len() {
-        assert_eq!(BORROWED_PACKET.len(), BUF.len());
-        assert_eq!(BORROWED_PACKET.to_owned().len(), BUF.len());
+        assert_eq!(borrowed_packet().len(), LEN);
+        assert_eq!(borrowed_packet().to_owned().len(), LEN);
     }
 
     #[test]
     fn test_packet_is_empty() {
-        assert!(!BORROWED_PACKET.is_empty());
-        assert!(!BORROWED_PACKET.to_owned().is_empty());
-
-        let p = OwnedPacket {
-            timestamp: TIMESTAMP,
-            packet: Vec::new(),
-        };
-
-        assert!(p.is_empty());
+        assert!(!borrowed_packet().is_empty());
+        assert!(!borrowed_packet().to_owned().is_empty());
     }
 }
