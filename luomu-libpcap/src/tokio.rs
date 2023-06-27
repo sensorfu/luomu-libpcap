@@ -68,7 +68,7 @@ fn capture_loop(pcap: crate::Pcap, tx: UnboundedSender<crate::Result<OwnedPacket
 fn next_packet(pcap: &crate::Pcap) -> Poll<crate::Result<OwnedPacket>> {
     match libpcap::pcap_next_ex(&pcap.pcap_t) {
         Ok(p) => Poll::Ready(Ok(p.to_owned())),
-        Err(e) if e == Error::Timeout => Poll::Pending,
+        Err(Error::Timeout) => Poll::Pending,
         Err(e) => Poll::Ready(Err(e)),
     }
 }
