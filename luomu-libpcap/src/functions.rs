@@ -340,7 +340,7 @@ pub fn pcap_next_ex(pcap_t: &PcapT) -> Result<BorrowedPacket> {
         panic!("header or packet NULL.");
     }
 
-    let ts: libc::timeval = unsafe { (*header).ts } as libc::timeval;
+    let ts: libc::timeval = unsafe { std::mem::transmute((*header).ts) };
     let len: usize = unsafe { (*header).caplen } as usize;
 
     let timestamp = UNIX_EPOCH + Duration::new(ts.tv_sec as u64, (ts.tv_usec as u32) * 1000);
@@ -359,7 +359,7 @@ pub fn pcap_next_ex(pcap_t: &PcapT) -> Result<BorrowedPacket> {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_open_dead.3pcap.html>
 pub fn pcap_open_dead() -> Result<PcapT> {
-    let pcap_t = unsafe { libpcap::pcap_open_dead(libpcap::dlt::DLT_EN10MB as libc::c_int, 65535) };
+    let pcap_t = unsafe { libpcap::pcap_open_dead(libpcap::DLT_EN10MB as libc::c_int, 65535) };
 
     // pcap_open_dead return value is not documented.
     debug_assert!(!pcap_t.is_null(), "Can pcap_open_dead() fail?");
@@ -522,22 +522,22 @@ pub(crate) fn try_address_from(pcap_addr_t: *mut libpcap::pcap_addr_t) -> Option
     trace!("try_address_from({:p})", pcap_addr_t);
     debug_assert!(!pcap_addr_t.is_null(), "null pointer");
     let addr = {
-        let addr: *const libc::sockaddr = unsafe { (*pcap_addr_t).addr };
+        let addr = unsafe { (*pcap_addr_t).addr as *const libc::sockaddr };
         from_sockaddr(addr)?
     };
 
     let netmask = {
-        let addr: *const libc::sockaddr = unsafe { (*pcap_addr_t).netmask };
+        let addr = unsafe { (*pcap_addr_t).netmask as *const libc::sockaddr };
         from_sockaddr(addr)
     };
 
     let broadaddr = {
-        let addr: *const libc::sockaddr = unsafe { (*pcap_addr_t).broadaddr };
+        let addr = unsafe { (*pcap_addr_t).broadaddr as *const libc::sockaddr };
         from_sockaddr(addr)
     };
 
     let dstaddr = {
-        let addr: *const libc::sockaddr = unsafe { (*pcap_addr_t).dstaddr };
+        let addr = unsafe { (*pcap_addr_t).dstaddr as *const libc::sockaddr };
         from_sockaddr(addr)
     };
 
