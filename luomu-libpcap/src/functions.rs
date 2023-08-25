@@ -443,6 +443,18 @@ pub fn pcap_dump(dumper: &mut PcapDumper, pkthdr: &libpcap::pcap_pkthdr, bytes: 
     }
 }
 
+/// get the link-layer header type
+///
+/// `pcap_datalink()` returns the link-layer header type for the live capture or
+/// ``savefile''.
+///
+/// <https://www.tcpdump.org/manpages/pcap_datalink.3pcap.html>
+pub fn pcap_datalink(pcap_t: &PcapT) -> Result<usize> {
+    let ret = unsafe { libpcap::pcap_datalink(pcap_t.pcap_t) };
+    check_pcap_error(pcap_t, ret)?;
+    Ok(ret as usize)
+}
+
 /// get a list of capture devices
 ///
 /// `pcap_findalldevs()` constructs a list of network devices that can be opened
