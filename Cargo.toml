@@ -1,7 +1,9 @@
 [workspace]
+resolver = "2"
 members = [
 	"luomu-common",
-	"luomu-libpcap",
 	"luomu-libpcap-sys",
+	"luomu-libpcap",
+	"luomu-pcap-file",
 	"luomu-tpacketv3",
 ]
