@@ -2,8 +2,9 @@
 name = "luomu-common"
 version = "0.1.0"
 authors = [ "Ossi Herrala <oherrala@iki.fi>" ]
-edition = "2018"
-license = "MIT"
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 
 description = "Common types and functions for network programming"
 homepage = "https://github.com/sensorfu/luomu-libpcap#readme"

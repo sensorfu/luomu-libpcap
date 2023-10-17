@@ -2,8 +2,9 @@
 name = "luomu-tpacketv3"
 version = "0.1.0"
 authors = ["Jukka Taimisto <jtaimisto@gmail.com>"]
-edition = "2018"
-license = "MIT"
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 
 description = "Rust bindings for packet capture using AF_PACKET and tpacketv3 on linux"
 homepage = "https://github.com/sensorfu/luomu-libpcap#readme"
