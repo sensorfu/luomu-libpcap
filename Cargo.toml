@@ -1,7 +1,13 @@
 [workspace]
+resolver = "2"
 members = [
 	"luomu-common",
 	"luomu-libpcap",
 	"luomu-libpcap-sys",
 	"luomu-tpacketv3",
 ]
+
+[workspace.package]
+license = "MIT"
+edition = "2021"
+rust-version = "1.70.0"  # MSRV
