@@ -29,7 +29,7 @@ fn main() -> Result<()> {
         .set_buffer_size(512 * 1024)?
         .activate()?;
 
-    pcap.set_filder("upd")?;
+    pcap.set_filter("udp")?;
 
     for packet in pcap.capture() {
         let mut hex = String::new();
