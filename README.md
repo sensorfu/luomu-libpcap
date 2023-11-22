@@ -25,10 +25,11 @@ fn main() -> Result<()> {
     let pcap = Pcap::builder("en0")?
         .set_promiscuous(true)?
         .set_immediate(true)?
-        .set_filter("udp")?
         .set_snaplen(65535)?
         .set_buffer_size(512 * 1024)?
         .activate()?;
+
+    pcap.set_filder("upd")?;
 
     for packet in pcap.capture() {
         let mut hex = String::new();
