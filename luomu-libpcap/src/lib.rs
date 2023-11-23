@@ -364,7 +364,7 @@ impl<'p> Iterator for PcapIter<'p> {
                     // "packet buffer expired" (whatever that means),
                     // even if the immediate mode is set. Just retry in
                     // this case.
-                    Error::Timeout => continue,
+                    Error::Timeout => return None,
                     _ => return None,
                 },
             }
