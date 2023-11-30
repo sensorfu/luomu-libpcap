@@ -13,31 +13,32 @@ fn main() -> Result<()> {
     pcap.set_filter("udp")?;
 
     let mut count = 0;
-    for packet in pcap.capture() {
-        let packet = packet.packet();
+    loop {
         let mut hex = String::new();
-        for (i, _) in packet.iter().enumerate() {
-            if i % 4 == 0 {
-                hex.push(' ');
+        for packet in pcap.capture() {
+            let packet = packet.packet();
+            for (i, _) in packet.iter().enumerate() {
+                if i % 4 == 0 {
+                    hex.push(' ');
+                }
+                if i % 32 == 0 {
+                    hex.push('\n');
+                }
+                hex.push_str(&format!("{:02x}", packet[i]));
             }
-            if i % 32 == 0 {
-                hex.push('\n');
-            }
-            hex.push_str(&format!("{:02x}", packet[i]));
-        }
-        count += 1;
-        println!("{}", hex);
-        if count % 100 == 0 && count != 0 {
-            if let Ok(stats) = pcap.stats() {
-                println!(
-                    "\nStats: received: {} packets, dropped: {} packets, dropped on interface {} packets",
-                    stats.packets_received(),
-                    stats.packets_dropped(),
-                    stats.packets_dropped_interface()
-                );
+            count += 1;
+            println!("{}", hex);
+            hex.clear();
+            if count % 100 == 0 && count != 0 {
+                if let Ok(stats) = pcap.stats() {
+                    println!(
+                        "\nStats: received: {} packets, dropped: {} packets, dropped on interface {} packets",
+                        stats.packets_received(),
+                        stats.packets_dropped(),
+                        stats.packets_dropped_interface()
+                    );
+                }
             }
         }
     }
-
-    Ok(())
 }
