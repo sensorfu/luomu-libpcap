@@ -52,7 +52,8 @@ impl AddrPair<IpAddr> for IPPair {
     ///
     /// # Panics
     /// Both [IpAddr] need to be same IP version or the call will panic. Use
-    /// [IPPair::new_v4] or [IPPair::new_v6] instead for safe versions.
+    /// [IPPair::new_checked], [IPPair::new_v4] or [IPPair::new_v6] instead for
+    /// safe versions.
     fn new(src: Source<IpAddr>, dst: Destination<IpAddr>) -> IPPair {
         match (src.unwrap(), dst.unwrap()) {
             (IpAddr::V4(src), IpAddr::V4(dst)) => {
@@ -92,6 +93,19 @@ impl AddrPair<IpAddr> for IPPair {
 }
 
 impl IPPair {
+    /// Creates [IPPair] for given source and destination addresses.
+    /// None is returned if addresses are of different address families.
+    pub fn new_checked(src: Source<IpAddr>, dst: Destination<IpAddr>) -> Option<IPPair> {
+        match (src.unwrap(), dst.unwrap()) {
+            (IpAddr::V4(s), IpAddr::V4(d)) => {
+                Some(IPPair::new_v4(Source::new(s), Destination::new(d)))
+            }
+            (IpAddr::V6(s), IpAddr::V6(d)) => {
+                Some(IPPair::new_v6(Source::new(s), Destination::new(d)))
+            }
+            _ => None,
+        }
+    }
     /// Construct a new `IPPair` from two [Ipv4Addr].
     pub const fn new_v4(src: Source<Ipv4Addr>, dst: Destination<Ipv4Addr>) -> IPPair {
         IPPair::V4 { src, dst }
@@ -184,6 +198,53 @@ mod tests {
     use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
     use crate::{AddrPair, Destination, IPPair, PortPair, Source};
+
+    #[test]
+    fn test_ip_pair_checked_v4() {
+        let ip1: IpAddr = "192.0.2.5".parse().unwrap();
+        let ip2: IpAddr = "198.51.100.255".parse().unwrap();
+
+        let ippair1 = IPPair::new_checked(Source::new(ip1), Destination::new(ip2)).unwrap();
+        let ippair2 = ippair1.flip();
+        assert_eq!(ippair2.source().unwrap(), ip2);
+        assert_eq!(ippair2.destination().unwrap(), ip1);
+    }
+
+    #[test]
+    fn test_ip_pair_checked_v6() {
+        let ip1: IpAddr = "2001:db8::1".parse().unwrap();
+        let ip2: IpAddr = "2001:db8:42::12:765".parse().unwrap();
+
+        let ippair1 = IPPair::new_checked(Source::new(ip1), Destination::new(ip2)).unwrap();
+        let ippair2 = ippair1.flip();
+        assert_eq!(ippair2.source().unwrap(), ip2);
+        assert_eq!(ippair2.destination().unwrap(), ip1);
+    }
+
+    #[test]
+    fn test_ip_pair_checked_invalid() {
+        let ip1: IpAddr = "192.0.2.5".parse().unwrap();
+        let ip2: IpAddr = "198.51.100.255".parse().unwrap();
+        let ip3: IpAddr = "2001:db8::1".parse().unwrap();
+        let ip4: IpAddr = "2001:db8:42::12:765".parse().unwrap();
+
+        assert_eq!(
+            IPPair::new_checked(Source::new(ip1), Destination::new(ip3)),
+            None
+        );
+        assert_eq!(
+            IPPair::new_checked(Source::new(ip2), Destination::new(ip4)),
+            None
+        );
+        assert_eq!(
+            IPPair::new_checked(Source::new(ip3), Destination::new(ip1)),
+            None
+        );
+        assert_eq!(
+            IPPair::new_checked(Source::new(ip4), Destination::new(ip2)),
+            None
+        );
+    }
 
     #[test]
     fn test_ip4_pair() {
