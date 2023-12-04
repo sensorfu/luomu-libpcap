@@ -16,27 +16,27 @@ pub enum Address {
 
 impl Address {
     /// True if IPv4 address
-    pub fn is_ipv4(&self) -> bool {
+    pub const fn is_ipv4(&self) -> bool {
         matches!(self, Address::Ipv4(_))
     }
 
     /// True if IPv6 address
-    pub fn is_ipv6(&self) -> bool {
+    pub const fn is_ipv6(&self) -> bool {
         matches!(self, Address::Ipv6(_))
     }
 
     /// True if either IPv4 or IPv6 address
-    pub fn is_ip(&self) -> bool {
+    pub const fn is_ip(&self) -> bool {
         self.is_ipv4() || self.is_ipv6()
     }
 
     /// True if MAC address
-    pub fn is_mac(&self) -> bool {
+    pub const fn is_mac(&self) -> bool {
         matches!(self, Address::Mac(_))
     }
 
     /// Return the `Ipv4Addr` or None
-    pub fn as_ipv4(&self) -> Option<Ipv4Addr> {
+    pub const fn as_ipv4(&self) -> Option<Ipv4Addr> {
         match self {
             Address::Ipv4(ip) => Some(*ip),
             _ => None,
@@ -44,7 +44,7 @@ impl Address {
     }
 
     /// Return the `Ipv6Addr` or None
-    pub fn as_ipv6(&self) -> Option<Ipv6Addr> {
+    pub const fn as_ipv6(&self) -> Option<Ipv6Addr> {
         match self {
             Address::Ipv6(ip) => Some(*ip),
             _ => None,
@@ -52,16 +52,16 @@ impl Address {
     }
 
     /// Return the `IpAddr` or None
-    pub fn as_ip(&self) -> Option<IpAddr> {
+    pub const fn as_ip(&self) -> Option<IpAddr> {
         match self {
-            Address::Ipv4(ip) => Some((*ip).into()),
-            Address::Ipv6(ip) => Some((*ip).into()),
+            Address::Ipv4(ip) => Some(IpAddr::V4(*ip)),
+            Address::Ipv6(ip) => Some(IpAddr::V6(*ip)),
             _ => None,
         }
     }
 
     /// Return the `MacAddr` or None
-    pub fn as_mac(&self) -> Option<MacAddr> {
+    pub const fn as_mac(&self) -> Option<MacAddr> {
         match self {
             Address::Mac(mac) => Some(*mac),
             _ => None,

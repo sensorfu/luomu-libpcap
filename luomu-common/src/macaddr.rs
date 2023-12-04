@@ -15,7 +15,7 @@ pub struct MacAddr([u8; 6]);
 
 impl MacAddr {
     /// checks if this address is multicast address.
-    pub fn is_multicast(&self) -> bool {
+    pub const fn is_multicast(&self) -> bool {
         // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast_(I/G_bit)
         // The least significant bit of an address's first octet is referred to
         // as the I/G, or Individual/Group, bit. When this bit is 0 (zero),
