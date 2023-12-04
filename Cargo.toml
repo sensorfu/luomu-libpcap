@@ -5,9 +5,10 @@ members = [
 	"luomu-libpcap",
 	"luomu-libpcap-sys",
 	"luomu-tpacketv3",
+	"luomu-getifaddrs",
 ]
 
 [workspace.package]
 license = "MIT"
 edition = "2021"
-rust-version = "1.70.0"  # MSRV
+rust-version = "1.70.0" # MSRV

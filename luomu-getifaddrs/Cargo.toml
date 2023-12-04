@@ -1,0 +1,18 @@
+[package]
+name = "luomu-getifaddrs"
+version = "0.1.0"
+authors = ["Ossi Herrala <oherrala@iki.fi>"]
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+description = "Safe interface for getifaddrs()"
+homepage = "https://github.com/sensorfu/luomu-libpcap#readme"
+repository = "https://github.com/sensorfu/luomu-libpcap"
+documentation = "https://docs.rs/luomu-libpcap/"
+
+[dependencies]
+bitflags = "2"
+cfg-if = "1"
+libc = { version = "0.2", features = ["extra_traits"] }
+luomu-common = { path = "../luomu-common" }
