@@ -92,6 +92,34 @@ impl AddrPair<IpAddr> for IPPair {
     }
 }
 
+impl From<(Source<Ipv4Addr>, Destination<Ipv4Addr>)> for IPPair {
+    fn from(value: (Source<Ipv4Addr>, Destination<Ipv4Addr>)) -> Self {
+        let (src, dst) = value;
+        IPPair::new_v4(src, dst)
+    }
+}
+
+impl From<(Destination<Ipv4Addr>, Source<Ipv4Addr>)> for IPPair {
+    fn from(value: (Destination<Ipv4Addr>, Source<Ipv4Addr>)) -> Self {
+        let (dst, src) = value;
+        IPPair::new_v4(src, dst)
+    }
+}
+
+impl From<(Source<Ipv6Addr>, Destination<Ipv6Addr>)> for IPPair {
+    fn from(value: (Source<Ipv6Addr>, Destination<Ipv6Addr>)) -> Self {
+        let (src, dst) = value;
+        IPPair::new_v6(src, dst)
+    }
+}
+
+impl From<(Destination<Ipv6Addr>, Source<Ipv6Addr>)> for IPPair {
+    fn from(value: (Destination<Ipv6Addr>, Source<Ipv6Addr>)) -> Self {
+        let (dst, src) = value;
+        IPPair::new_v6(src, dst)
+    }
+}
+
 impl IPPair {
     /// Creates [IPPair] for given source and destination addresses.
     /// None is returned if addresses are of different address families.
@@ -136,6 +164,20 @@ pub struct PortPair {
     dst: Destination<u16>,
 }
 
+impl From<(Source<u16>, Destination<u16>)> for PortPair {
+    fn from(value: (Source<u16>, Destination<u16>)) -> Self {
+        let (src, dst) = value;
+        PortPair::new(src, dst)
+    }
+}
+
+impl From<(Destination<u16>, Source<u16>)> for PortPair {
+    fn from(value: (Destination<u16>, Source<u16>)) -> Self {
+        let (dst, src) = value;
+        PortPair::new(src, dst)
+    }
+}
+
 impl AddrPair<u16> for PortPair {
     /// Construct new `PortPair` with `Source` and `Destination` ports.
     fn new(src: Source<u16>, dst: Destination<u16>) -> PortPair {
@@ -166,6 +208,20 @@ impl AddrPair<u16> for PortPair {
 pub struct MacPair {
     src: Source<MacAddr>,
     dst: Destination<MacAddr>,
+}
+
+impl From<(Source<MacAddr>, Destination<MacAddr>)> for MacPair {
+    fn from(value: (Source<MacAddr>, Destination<MacAddr>)) -> Self {
+        let (src, dst) = value;
+        MacPair::new(src, dst)
+    }
+}
+
+impl From<(Destination<MacAddr>, Source<MacAddr>)> for MacPair {
+    fn from(value: (Destination<MacAddr>, Source<MacAddr>)) -> Self {
+        let (dst, src) = value;
+        MacPair::new(src, dst)
+    }
 }
 
 impl AddrPair<MacAddr> for MacPair {
