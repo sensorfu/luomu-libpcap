@@ -4,7 +4,7 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use super::{InvalidAddress, MacAddr};
 
 /// Address of some sort. IPv4, IPv6, MAC.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Address {
     /// IPv4 address
     Ipv4(Ipv4Addr),
