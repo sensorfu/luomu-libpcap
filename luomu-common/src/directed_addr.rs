@@ -15,6 +15,14 @@ impl<ADDR> Source<ADDR> {
         Destination(self.unwrap())
     }
 
+    /// Return new [Source] where function f has been applied to ADDR.
+    pub fn map<F>(self, f: F) -> Source<ADDR>
+    where
+        F: FnOnce(ADDR) -> ADDR,
+    {
+        Source(f(self.0))
+    }
+
     /// Returns the underlying value inside `Source`.
     pub fn unwrap(self) -> ADDR {
         self.0
@@ -72,6 +80,14 @@ impl<ADDR> Destination<ADDR> {
     /// Make a [Source] out from `Destination`.
     pub fn flip(self) -> Source<ADDR> {
         Source(self.unwrap())
+    }
+
+    /// Return new [Destination] where function f has been applied to ADDR.
+    pub fn map<F>(self, f: F) -> Destination<ADDR>
+    where
+        F: FnOnce(ADDR) -> ADDR,
+    {
+        Destination(f(self.0))
     }
 
     /// Returns the underlying value inside `Destination`.
@@ -199,5 +215,16 @@ mod tests {
         let hello: &str = "Hello World!";
         let a: Source<&str> = hello.into();
         assert_eq!(*a, hello);
+    }
+
+    #[test]
+    fn test_map() {
+        let src_port: Source<u16> = Source::new(12765);
+        let new_port = src_port.map(|p| p.wrapping_add(1));
+        assert_eq!(new_port.unwrap(), src_port.unwrap() + 1);
+
+        let dst_port: Destination<u16> = Destination::new(12765);
+        let new_port = dst_port.map(|p| p.wrapping_add(2));
+        assert_eq!(new_port.unwrap(), src_port.unwrap() + 2);
     }
 }
