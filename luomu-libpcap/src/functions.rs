@@ -18,6 +18,7 @@ use std::mem::MaybeUninit;
 use std::net::{Ipv4Addr, Ipv6Addr};
 use std::os::fd::AsRawFd;
 use std::path::Path;
+use std::time::Duration;
 
 use log::trace;
 
@@ -167,6 +168,55 @@ pub fn pcap_set_timeout(pcap_t: &PcapT, to_ms: i32) -> Result<()> {
     trace!("pcap_set_timeout({:p}, {})", pcap_t.pcap_t, to_ms);
     let ret = unsafe { libpcap::pcap_set_timeout(pcap_t.pcap_t, to_ms as libc::c_int) };
     check_pcap_error(pcap_t, ret)
+}
+
+/// Sets the capture handle non-blocking mode.
+///
+/// <https://www.tcpdump.org/manpages/pcap_setnonblock.3pcap.html>
+pub fn pcap_set_nonblock(pcap_t: &PcapT, nonblock: bool) -> Result<()> {
+    let mut errbuf: Vec<u8> = vec![0; libpcap::PCAP_ERRBUF_SIZE as usize];
+
+    let arg: libc::c_int = match nonblock {
+        true => 1,
+        false => 0,
+    };
+
+    let ret = unsafe {
+        libpcap::pcap_setnonblock(pcap_t.pcap_t, arg, errbuf.as_mut_ptr() as *mut libc::c_char)
+    };
+    match ret {
+        PCAP_SUCCESS => Ok(()),
+        PCAP_ERROR => {
+            let cstr = unsafe { CStr::from_ptr(errbuf.as_ptr() as *const libc::c_char) };
+            let err = cstr.to_str()?.to_owned();
+            Err(Error::PcapError(err))
+        }
+        n => Err(Error::PcapErrorCode(n)),
+    }
+}
+
+/// Returns file descriptor number for file descriptor where select() etc.
+/// can be done to read packets without blocking.
+///
+/// <https://www.tcpdump.org/manpages/pcap_get_selectable_fd.3pcap.html>
+pub fn pcap_get_selectable_fd(pcap_t: &PcapT) -> Result<i32> {
+    let ret = unsafe { libpcap::pcap_get_selectable_fd(pcap_t.pcap_t) };
+    check_pcap_error(pcap_t, ret)?;
+    Ok(ret)
+}
+
+/// Returns minimum timeout values that should be used for select() etc.
+///
+/// <https://www.tcpdump.org/manpages/pcap_get_required_select_timeout.3pcap.html>
+pub fn pcap_get_required_select_timeout(pcap_t: &PcapT) -> Option<Duration> {
+    let tv = unsafe { libpcap::pcap_get_required_select_timeout(pcap_t.pcap_t) };
+    if tv.is_null() {
+        None
+    } else {
+        Some(Duration::from_micros(unsafe {
+            (*tv).tv_sec as u64 * 1_000_000 + (*tv).tv_usec as u64
+        }))
+    }
 }
 
 /// activate a capture handle
@@ -686,6 +736,29 @@ fn check_pcap_error(pcap_t: &PcapT, ret: i32) -> Result<()> {
         libpcap::PCAP_ERROR_TSTAMP_PRECISION_NOTSUP => Err(Error::TimestampPrecisionNotSupported),
         n if n < 0 => Err(Error::PcapErrorCode(n)),
         _ => Ok(()),
+    }
+}
+
+/// Polls for given `fd` for `timeout` to become readable returning `true` if
+/// `fd` is readable.
+pub fn poll_fd_in(fd: i32, timeout: Duration) -> std::io::Result<bool> {
+    let mut pfd = libc::pollfd {
+        fd,
+        events: libc::POLLIN,
+        revents: 0,
+    };
+
+    let ret = unsafe { libc::poll(&mut pfd, 1, timeout.as_millis() as i32) };
+    match ret {
+        0 => Ok(false),
+        -1 => Err(std::io::Error::last_os_error()),
+        _ => {
+            if pfd.revents & libc::POLLIN == libc::POLLIN {
+                Ok(true)
+            } else {
+                Ok(false)
+            }
+        }
     }
 }
 

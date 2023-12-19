@@ -159,6 +159,19 @@ impl Pcap {
         PcapIter::new(&self.pcap_t)
     }
 
+    /// Start capturing packet in non-blocking mode.
+    ///
+    /// Returned iterator can be used to get captured packets, it no packets
+    /// are available within given `wait_time` [None] is returned by the
+    /// `next()` method of the iterator. [Error] is returned if capture
+    /// could not be placed into non-blocking mode.
+    ///
+    /// Note that captures opened with [Self::offline()] can not be put on
+    /// non-blocking mode and calling this method will return error.
+    pub fn capture_nonblocking(&self, wait_time: Duration) -> Result<NonBlockingIter<'_>> {
+        NonBlockingIter::new(&self.pcap_t, wait_time)
+    }
+
     /// Transmit a packet
     pub fn inject(&self, buf: &[u8]) -> Result<usize> {
         pcap_inject(&self.pcap_t, buf)
@@ -357,6 +370,70 @@ impl<'p> Iterator for PcapIter<'p> {
 
     fn next(&mut self) -> Option<Self::Item> {
         pcap_next_ex(self.pcap_t).ok()
+    }
+}
+
+/// Pcap capture iterator for reading packets in nonblocking mdoe.
+///
+/// The [Self::next()] method will return [None] if no packets have been
+/// received within the timeout given as parameter when this iterator is created
+/// with [Pcap::capture_nonblocking()] method.
+///
+/// To allow detecting that capturing device has been removed or other error
+/// occurs while reading packets, this iterator returns [Result].
+pub struct NonBlockingIter<'p> {
+    /// Pcap handle
+    pcap_t: &'p PcapT,
+    /// Selectable file descriptor to use when waiting for packet
+    fd: i32,
+    /// how long to wait for packet to be available
+    wait_time: Duration,
+}
+
+impl<'p> NonBlockingIter<'p> {
+    /// Creates new instance of nonblocking iterator with `wait_times` as
+    /// the timeout for how long to wait for packets.
+    fn new(pcap_t: &'p PcapT, wait_time: Duration) -> Result<Self> {
+        pcap_set_nonblock(pcap_t, true)?;
+        let fd = pcap_get_selectable_fd(pcap_t)?;
+        Ok(Self {
+            pcap_t,
+            fd,
+            wait_time,
+        })
+    }
+}
+
+impl<'p> Iterator for NonBlockingIter<'p> {
+    type Item = Result<BorrowedPacket>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // first check if there is already packet available
+        match pcap_next_ex(self.pcap_t) {
+            Ok(pkt) => return Some(Ok(pkt)),
+            Err(Error::Timeout) => {}
+            Err(err) => return Some(Err(err)),
+        }
+
+        let timeout = match pcap_get_required_select_timeout(self.pcap_t) {
+            Some(min_tv) => min_tv.max(self.wait_time),
+            None => self.wait_time,
+        };
+        match poll_fd_in(self.fd, timeout) {
+            Ok(true) => match pcap_next_ex(self.pcap_t) {
+                Ok(pkt) => Some(Ok(pkt)),
+                Err(Error::Timeout) => None,
+                Err(err) => Some(Err(err)),
+            },
+            Ok(false) => None,
+            Err(err) => {
+                // return None if we get error while polling, expecting that
+                // pcap_next_ex() will return error next time if the handle
+                // is no longer valid etc.
+                log::trace!("Error while polling: {}", err);
+                None
+            }
+        }
     }
 }
 
