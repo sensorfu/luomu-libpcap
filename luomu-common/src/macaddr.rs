@@ -14,7 +14,12 @@ use super::InvalidAddress;
 pub struct MacAddr([u8; 6]);
 
 impl MacAddr {
-    /// checks if this address is multicast address.
+    /// Checks if this address is unspecified (`00:00:00:00:00:00`) address.
+    pub fn is_unspecified(&self) -> bool {
+        self.0 == [0; 6]
+    }
+
+    /// Checks if this address is multicast address.
     pub const fn is_multicast(&self) -> bool {
         // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast_(I/G_bit)
         // The least significant bit of an address's first octet is referred to
@@ -188,6 +193,16 @@ mod tests {
         let addr: MacAddr = str.try_into().unwrap();
 
         assert_eq!(addr.to_string(), str);
+    }
+
+    #[test]
+    fn test_is_unspecified() {
+        let addr1: MacAddr = "00:11:22:33:44:55".parse().unwrap();
+        assert!(!addr1.is_unspecified());
+        let addr2: MacAddr = "ff:ff:ff:ff:ff:ff".parse().unwrap();
+        assert!(!addr2.is_unspecified());
+        let addr3: MacAddr = "00:00:00:00:00:00".parse().unwrap();
+        assert!(addr3.is_unspecified());
     }
 
     #[test]
