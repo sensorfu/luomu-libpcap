@@ -16,9 +16,9 @@ impl<ADDR> Source<ADDR> {
     }
 
     /// Return new [Source] where function f has been applied to ADDR.
-    pub fn map<F>(self, f: F) -> Source<ADDR>
+    pub fn map<ADDR2, F>(self, f: F) -> Source<ADDR2>
     where
-        F: FnOnce(ADDR) -> ADDR,
+        F: FnOnce(ADDR) -> ADDR2,
     {
         Source(f(self.0))
     }
@@ -83,9 +83,9 @@ impl<ADDR> Destination<ADDR> {
     }
 
     /// Return new [Destination] where function f has been applied to ADDR.
-    pub fn map<F>(self, f: F) -> Destination<ADDR>
+    pub fn map<ADDR2, F>(self, f: F) -> Destination<ADDR2>
     where
-        F: FnOnce(ADDR) -> ADDR,
+        F: FnOnce(ADDR) -> ADDR2,
     {
         Destination(f(self.0))
     }
@@ -226,5 +226,17 @@ mod tests {
         let dst_port: Destination<u16> = Destination::new(12765);
         let new_port = dst_port.map(|p| p.wrapping_add(2));
         assert_eq!(new_port.unwrap(), src_port.unwrap() + 2);
+
+        let src_ip: Source<Ipv4Addr> = Source::new(Ipv4Addr::UNSPECIFIED);
+        assert_eq!(
+            src_ip.map(IpAddr::V4),
+            Source::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED))
+        );
+
+        let dst_ip: Destination<Ipv6Addr> = Destination::new(Ipv6Addr::UNSPECIFIED);
+        assert_eq!(
+            dst_ip.map(IpAddr::V6),
+            Destination::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED))
+        );
     }
 }
