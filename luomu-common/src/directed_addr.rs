@@ -1,3 +1,4 @@
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::ops::{Deref, DerefMut};
 
 /// A `Source` of any kind. For example an IP address.
@@ -67,6 +68,18 @@ impl<ADDR> AsMut<ADDR> for Source<ADDR> {
     }
 }
 
+impl From<Source<Ipv4Addr>> for Source<IpAddr> {
+    fn from(addr: Source<Ipv4Addr>) -> Self {
+        Source::new(IpAddr::V4(addr.unwrap()))
+    }
+}
+
+impl From<Source<Ipv6Addr>> for Source<IpAddr> {
+    fn from(addr: Source<Ipv6Addr>) -> Self {
+        Source::new(IpAddr::V6(addr.unwrap()))
+    }
+}
+
 /// A `Destination` of any kind. For example an IP address.
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Destination<ADDR>(ADDR);
@@ -131,6 +144,18 @@ impl<ADDR> AsRef<ADDR> for Destination<ADDR> {
 impl<ADDR> AsMut<ADDR> for Destination<ADDR> {
     fn as_mut(&mut self) -> &mut ADDR {
         &mut self.0
+    }
+}
+
+impl From<Destination<Ipv4Addr>> for Destination<IpAddr> {
+    fn from(addr: Destination<Ipv4Addr>) -> Self {
+        Destination::new(IpAddr::V4(addr.unwrap()))
+    }
+}
+
+impl From<Destination<Ipv6Addr>> for Destination<IpAddr> {
+    fn from(addr: Destination<Ipv6Addr>) -> Self {
+        Destination::new(IpAddr::V6(addr.unwrap()))
     }
 }
 
