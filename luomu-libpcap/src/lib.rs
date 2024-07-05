@@ -305,7 +305,7 @@ impl PcapFilter {
     }
 
     /// Get length of the compiled filter
-    pub fn get_raw_filter_len(&self) -> u32 {
+    pub const fn get_raw_filter_len(&self) -> u32 {
         self.bpf_program.bf_len
     }
 
@@ -455,19 +455,19 @@ impl default::Default for PcapStat {
 
 impl PcapStat {
     /// Return number of packets received.
-    pub fn packets_received(&self) -> u32 {
+    pub const fn packets_received(&self) -> u32 {
         self.stats.ps_recv
     }
 
     /// Return number of packets dropped because there was no room in the
     /// operating system's buffer when they arrived, because packets weren't
     /// being read fast enough.
-    pub fn packets_dropped(&self) -> u32 {
+    pub const fn packets_dropped(&self) -> u32 {
         self.stats.ps_drop
     }
 
     /// Return number of packets dropped by the network interface or its driver.
-    pub fn packets_dropped_interface(&self) -> u32 {
+    pub const fn packets_dropped_interface(&self) -> u32 {
         self.stats.ps_ifdrop
     }
 }
@@ -490,7 +490,7 @@ impl PcapIfT {
     }
 
     /// Return iterator for iterating capture devices.
-    pub fn iter(&self) -> InterfaceIter {
+    pub const fn iter(&self) -> InterfaceIter {
         InterfaceIter {
             start: self.pcap_if_t,
             next: Some(self.pcap_if_t),
