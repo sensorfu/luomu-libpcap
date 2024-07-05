@@ -549,17 +549,17 @@ pub struct Interface {
 impl Interface {
     /// True if interface is up
     pub fn is_up(&self) -> bool {
-        self.flags.get(&InterfaceFlag::Up).is_some()
+        self.flags.contains(&InterfaceFlag::Up)
     }
 
     /// True if interface is running
     pub fn is_running(&self) -> bool {
-        self.flags.get(&InterfaceFlag::Running).is_some()
+        self.flags.contains(&InterfaceFlag::Running)
     }
 
     /// True if interface is loopback
     pub fn is_loopback(&self) -> bool {
-        self.flags.get(&InterfaceFlag::Loopback).is_some()
+        self.flags.contains(&InterfaceFlag::Loopback)
     }
 
     /// True if interface is has name `name`
@@ -587,7 +587,7 @@ impl Interface {
 
     /// True if interface is has IP address `ip`
     pub fn has_address(&self, ip: &IpAddr) -> bool {
-        self.get_ip_addresses().get(ip).is_some()
+        self.get_ip_addresses().contains(ip)
     }
 }
 
