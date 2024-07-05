@@ -186,7 +186,7 @@ impl Fd {
     pub fn set_filter(&self, filt: PcapFilter) -> Result<(), std::io::Error> {
         let prog = sock_fprog {
             len: filt.get_raw_filter_len() as u16,
-            filter: unsafe { filt.get_raw_filter() as *const libc::c_void },
+            filter: filt.get_raw_filter(),
         };
         self.setopt(Option::SocketAttachFilter(OptValue { val: prog }))
     }
