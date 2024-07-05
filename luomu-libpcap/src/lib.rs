@@ -58,7 +58,7 @@ pub type Result<T> = result::Result<T, Error>;
 pub struct PcapT {
     pcap_t: *mut libpcap::pcap_t,
     #[allow(dead_code)]
-    errbuf: Vec<u8>,
+    errbuf: Errbuf,
     interface: Option<String>,
 }
 
@@ -203,6 +203,34 @@ impl Deref for Pcap {
 
     fn deref(&self) -> &Self::Target {
         &self.pcap_t
+    }
+}
+
+/// Libpcap's buffer to hold possible error messages. Buffer is large enough to
+/// hold at least [libpcap::PCAP_ERRBUF_SIZE] bytes.
+struct Errbuf(Box<[u8]>);
+
+impl Errbuf {
+    /// Initialize new memory buffer to hold libpcap's error messages.
+    fn new() -> Errbuf {
+        let buf: Box<[u8]> = Box::new([0u8; libpcap::PCAP_ERRBUF_SIZE as usize]);
+        Self(buf)
+    }
+
+    /// Return libpcap's error message as borrowed string.
+    fn as_str(&self) -> Result<&str> {
+        use std::ffi::CStr;
+        let cstr = unsafe { CStr::from_ptr(self.0.as_ptr() as *const libc::c_char) };
+        Ok(cstr.to_str()?)
+    }
+
+    /// Return libpcap's error message as String.
+    fn as_string(&self) -> Result<String> {
+        Ok(self.as_str()?.to_string())
+    }
+
+    fn as_mut_ptr<T>(&mut self) -> *mut T {
+        self.0.as_mut_ptr() as *mut T
     }
 }
 

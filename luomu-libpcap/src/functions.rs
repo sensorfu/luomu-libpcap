@@ -23,8 +23,8 @@ use std::time::Duration;
 use log::trace;
 
 use crate::{
-    Address, AddressIter, BorrowedPacket, Error, Interface, InterfaceAddress, InterfaceFlag,
-    MacAddr, PcapDumper, PcapFilter, PcapIfT, PcapStat, PcapT, Result,
+    Address, AddressIter, BorrowedPacket, Errbuf, Error, Interface, InterfaceAddress,
+    InterfaceFlag, MacAddr, PcapDumper, PcapFilter, PcapIfT, PcapStat, PcapT, Result,
 };
 
 use luomu_libpcap_sys as libpcap;
@@ -42,21 +42,16 @@ const PCAP_ERROR: i32 = libpcap::PCAP_ERROR;
 ///
 /// <https://www.tcpdump.org/manpages/pcap_create.3pcap.html>
 pub fn pcap_create(source: &str) -> Result<PcapT> {
-    let mut errbuf: Vec<u8> = vec![0; libpcap::PCAP_ERRBUF_SIZE as usize];
+    let mut errbuf = Errbuf::new();
     let interface = Some(source.to_string());
     let source = CString::new(source)?;
 
-    let pcap_t =
-        unsafe { libpcap::pcap_create(source.as_ptr(), errbuf.as_mut_ptr() as *mut libc::c_char) };
+    let pcap_t = unsafe { libpcap::pcap_create(source.as_ptr(), errbuf.as_mut_ptr()) };
 
     trace!("pcap_create({:?}) => {:p}", source, pcap_t);
-
     if pcap_t.is_null() {
-        let cstr = unsafe { CStr::from_ptr(errbuf.as_ptr() as *const libc::c_char) };
-        let err = cstr.to_str()?.to_owned();
-        return Err(Error::PcapError(err));
+        return Err(Error::PcapError(errbuf.as_string()?));
     }
-
     Ok(PcapT {
         pcap_t,
         errbuf,
@@ -70,19 +65,14 @@ pub fn pcap_create(source: &str) -> Result<PcapT> {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_open_offline.3pcap.html>
 pub fn pcap_open_offline<P: AsRef<Path>>(savefile: P) -> Result<PcapT> {
-    let mut errbuf: Vec<u8> = vec![0; libpcap::PCAP_ERRBUF_SIZE as usize];
-
+    let mut errbuf = Errbuf::new();
     let fname = CString::new(savefile.as_ref().to_string_lossy().as_ref())?;
 
-    let pcap_t = unsafe {
-        libpcap::pcap_open_offline(fname.as_ptr(), errbuf.as_mut_ptr() as *mut libc::c_char)
-    };
+    let pcap_t = unsafe { libpcap::pcap_open_offline(fname.as_ptr(), errbuf.as_mut_ptr()) };
 
     trace!("pcap_open_offline({:?}) => {:p}", fname, pcap_t);
     if pcap_t.is_null() {
-        let cstr = unsafe { CStr::from_ptr(errbuf.as_ptr() as *const libc::c_char) };
-        let err = cstr.to_str()?.to_owned();
-        return Err(Error::PcapError(err));
+        return Err(Error::PcapError(errbuf.as_string()?));
     }
     Ok(PcapT {
         pcap_t,
@@ -174,23 +164,17 @@ pub fn pcap_set_timeout(pcap_t: &PcapT, to_ms: i32) -> Result<()> {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_setnonblock.3pcap.html>
 pub fn pcap_set_nonblock(pcap_t: &PcapT, nonblock: bool) -> Result<()> {
-    let mut errbuf: Vec<u8> = vec![0; libpcap::PCAP_ERRBUF_SIZE as usize];
+    let mut errbuf = Errbuf::new();
 
     let arg: libc::c_int = match nonblock {
         true => 1,
         false => 0,
     };
 
-    let ret = unsafe {
-        libpcap::pcap_setnonblock(pcap_t.pcap_t, arg, errbuf.as_mut_ptr() as *mut libc::c_char)
-    };
+    let ret = unsafe { libpcap::pcap_setnonblock(pcap_t.pcap_t, arg, errbuf.as_mut_ptr()) };
     match ret {
         PCAP_SUCCESS => Ok(()),
-        PCAP_ERROR => {
-            let cstr = unsafe { CStr::from_ptr(errbuf.as_ptr() as *const libc::c_char) };
-            let err = cstr.to_str()?.to_owned();
-            Err(Error::PcapError(err))
-        }
+        PCAP_ERROR => Err(Error::PcapError(errbuf.as_string()?)),
         n => Err(Error::PcapErrorCode(n)),
     }
 }
@@ -408,10 +392,9 @@ pub fn pcap_open_dead() -> Result<PcapT> {
     // pcap_open_dead return value is not documented.
     debug_assert!(!pcap_t.is_null(), "Can pcap_open_dead() fail?");
 
-    let errbuf: Vec<u8> = vec![0; libpcap::PCAP_ERRBUF_SIZE as usize];
     Ok(PcapT {
         pcap_t,
-        errbuf,
+        errbuf: Errbuf::new(),
         interface: None,
     })
 }
@@ -505,22 +488,16 @@ pub fn pcap_dump(dumper: &mut PcapDumper, pkthdr: &libpcap::pcap_pkthdr, bytes: 
 /// <https://www.tcpdump.org/manpages/pcap_findalldevs.3pcap.html>
 pub fn pcap_findalldevs() -> Result<PcapIfT> {
     let mut pcap_if_t: *mut libpcap::pcap_if_t = std::ptr::null_mut();
-    let mut errbuf: Vec<u8> = vec![0; libpcap::PCAP_ERRBUF_SIZE as usize];
+    let mut errbuf = Errbuf::new();
 
-    let ret = unsafe {
-        libpcap::pcap_findalldevs(&mut pcap_if_t, errbuf.as_mut_ptr() as *mut libc::c_char)
-    };
+    let ret = unsafe { libpcap::pcap_findalldevs(&mut pcap_if_t, errbuf.as_mut_ptr()) };
 
     match ret {
         PCAP_SUCCESS => {
             trace!("pcap_findalldevs() => {:p}", pcap_if_t);
             Ok(PcapIfT { pcap_if_t })
         }
-        PCAP_ERROR => {
-            let cstr = unsafe { CStr::from_ptr(errbuf.as_ptr() as *const libc::c_char) };
-            let err = cstr.to_str()?.to_owned();
-            Err(Error::PcapError(err))
-        }
+        PCAP_ERROR => Err(Error::PcapError(errbuf.as_string()?)),
         n => Err(Error::PcapErrorCode(n)),
     }
 }
