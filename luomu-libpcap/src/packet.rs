@@ -18,6 +18,9 @@ pub trait Packet {
     /// Get the contents of a packet.
     fn to_vec(self) -> Vec<u8>;
 
+    /// Get the contents of a packet.
+    fn boxed(self) -> Box<[u8]>;
+
     /// Length of captured packet.
     ///
     /// Packet should always have some bytes so length is never zero.
@@ -37,7 +40,7 @@ pub trait Packet {
 #[derive(Clone, Debug)]
 pub struct OwnedPacket {
     header: pcap_pkthdr,
-    packet: Vec<u8>,
+    packet: Box<[u8]>,
 }
 
 impl Packet for OwnedPacket {
@@ -51,6 +54,10 @@ impl Packet for OwnedPacket {
     }
 
     fn to_vec(self) -> Vec<u8> {
+        self.packet.into_vec()
+    }
+
+    fn boxed(self) -> Box<[u8]> {
         self.packet
     }
 
@@ -90,7 +97,7 @@ impl BorrowedPacket {
     pub fn to_owned(self) -> OwnedPacket {
         OwnedPacket {
             header: unsafe { *(self.pkthdr) },
-            packet: self.to_vec(),
+            packet: self.packet().into(),
         }
     }
 }
@@ -107,6 +114,10 @@ impl Packet for BorrowedPacket {
 
     fn to_vec(self) -> Vec<u8> {
         self.packet().to_vec()
+    }
+
+    fn boxed(self) -> Box<[u8]> {
+        self.packet().into()
     }
 
     fn len(&self) -> usize {
@@ -176,6 +187,12 @@ mod tests {
     fn test_packet_to_vec() {
         assert_eq!(borrowed_packet().to_vec(), Vec::from(BUF));
         assert_eq!(borrowed_packet().to_owned().to_vec(), Vec::from(BUF));
+    }
+
+    #[test]
+    fn test_packet_boxed() {
+        assert_eq!(borrowed_packet().boxed(), Box::from(BUF));
+        assert_eq!(borrowed_packet().to_owned().boxed(), Box::from(BUF));
     }
 
     #[test]
