@@ -59,7 +59,7 @@ pub struct PcapT {
     pcap_t: *mut libpcap::pcap_t,
     #[allow(dead_code)]
     errbuf: Errbuf,
-    interface: Option<String>,
+    interface: Option<Box<str>>,
 }
 
 // I assume the pcap_t pointer is safe to move between threads, but it can only
@@ -73,7 +73,7 @@ impl PcapT {
     /// `get_interface` returns the interface name if known or "<unknown>".
     pub fn get_inteface(&self) -> String {
         if let Some(name) = &self.interface {
-            name.to_owned()
+            name.to_string()
         } else {
             String::from("<unknown>")
         }
@@ -546,7 +546,7 @@ impl PcapIfT {
         for interface in self.get_interfaces() {
             if interface.has_address(ip) {
                 log::trace!("find_interface_with_ip({}) = {:?}", ip, interface);
-                return Some(interface.name);
+                return Some(interface.name.into_string());
             }
         }
         None
@@ -565,9 +565,9 @@ impl Drop for PcapIfT {
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Interface {
     /// Devices name
-    pub name: String,
+    pub name: Box<str>,
     /// Devices description
-    pub description: Option<String>,
+    pub description: Option<Box<str>>,
     /// All addresses found from device
     pub addresses: BTreeSet<InterfaceAddress>,
     /// Flags set for device
@@ -592,7 +592,7 @@ impl Interface {
 
     /// True if interface is has name `name`
     pub fn has_name(&self, name: &str) -> bool {
-        self.name == name
+        self.name.as_ref() == name
     }
 
     /// Return MAC aka Ethernet address of the interface
