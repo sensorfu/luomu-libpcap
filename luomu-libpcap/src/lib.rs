@@ -310,15 +310,14 @@ impl PcapFilter {
     }
 
     /// Get pointer to the raw compiled filter program.
+    ///
     /// Raw filter may be used when attaching filter to socket outside libpcap.
     /// # Safety
     /// Note that the pointer is valid only as long as this filter is valid.
     /// The returned pointer will be cast as *void since there is no common
     /// structure to which export the program.
-    pub unsafe fn get_raw_filter(&self) -> &std::ffi::c_void {
-        (self.bpf_program.bf_insns as *const std::ffi::c_void)
-            .as_ref()
-            .unwrap()
+    pub const fn get_raw_filter(&self) -> *const std::ffi::c_void {
+        self.bpf_program.bf_insns as *const std::ffi::c_void
     }
 }
 
