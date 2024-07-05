@@ -43,12 +43,12 @@ const PCAP_ERROR: i32 = libpcap::PCAP_ERROR;
 /// <https://www.tcpdump.org/manpages/pcap_create.3pcap.html>
 pub fn pcap_create(source: &str) -> Result<PcapT> {
     let mut errbuf = Errbuf::new();
-    let interface = Some(source.to_string());
-    let source = CString::new(source)?;
+    let interface = Some(source.into());
+    let src = CString::new(source)?;
 
-    let pcap_t = unsafe { libpcap::pcap_create(source.as_ptr(), errbuf.as_mut_ptr()) };
+    let pcap_t = unsafe { libpcap::pcap_create(src.as_ptr(), errbuf.as_mut_ptr()) };
 
-    trace!("pcap_create({:?}) => {:p}", source, pcap_t);
+    trace!("pcap_create({}) => {:p}", source, pcap_t);
     if pcap_t.is_null() {
         return Err(Error::PcapError(errbuf.as_string()?));
     }
@@ -515,23 +515,23 @@ pub fn pcap_freealldevs(pcap_if_t: PcapIfT) {
 
 pub(crate) fn try_interface_from(pcap_if_t: *mut libpcap::pcap_if_t) -> Result<Interface> {
     trace!("try_interface_from({:p})", pcap_if_t);
-    let name: String = {
+    let name: Box<str> = {
         let name = unsafe { (*pcap_if_t).name };
         if name.is_null() {
             panic!("pcap_if_t.name is null");
         } else {
             let s = unsafe { CStr::from_ptr(name) };
-            s.to_str()?.to_owned()
+            s.to_str()?.into()
         }
     };
 
-    let description: Option<String> = {
+    let description: Option<Box<str>> = {
         let descr = unsafe { (*pcap_if_t).description };
         if descr.is_null() {
             None
         } else {
             let s = unsafe { CStr::from_ptr(descr) };
-            Some(s.to_str()?.to_owned())
+            Some(s.to_str()?.into())
         }
     };
 
