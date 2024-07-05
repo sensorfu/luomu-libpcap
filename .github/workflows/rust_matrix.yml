@@ -7,12 +7,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-20.04, ubuntu-22.04, macos-11, macos-12 ]
+        os: [ ubuntu-22.04, ubuntu-24.04, macos-13, macos-14 ]
         toolchain:
           - stable
           - beta
           - nightly
-          - 1.70.0  # MSRV
+          - 1.74.1  # MSRV
 
     steps:
       - name: Install dependencies
