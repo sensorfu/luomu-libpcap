@@ -58,8 +58,8 @@ pub type Result<T> = result::Result<T, Error>;
 pub struct PcapT {
     pcap_t: *mut libpcap::pcap_t,
     #[allow(dead_code)]
-    errbuf: Vec<u8>,
-    interface: Option<String>,
+    errbuf: Errbuf,
+    interface: Option<Box<str>>,
 }
 
 // I assume the pcap_t pointer is safe to move between threads, but it can only
@@ -73,7 +73,7 @@ impl PcapT {
     /// `get_interface` returns the interface name if known or "<unknown>".
     pub fn get_inteface(&self) -> String {
         if let Some(name) = &self.interface {
-            name.to_owned()
+            name.to_string()
         } else {
             String::from("<unknown>")
         }
@@ -203,6 +203,34 @@ impl Deref for Pcap {
 
     fn deref(&self) -> &Self::Target {
         &self.pcap_t
+    }
+}
+
+/// Libpcap's buffer to hold possible error messages. Buffer is large enough to
+/// hold at least [libpcap::PCAP_ERRBUF_SIZE] bytes.
+struct Errbuf(Box<[u8]>);
+
+impl Errbuf {
+    /// Initialize new memory buffer to hold libpcap's error messages.
+    fn new() -> Errbuf {
+        let buf: Box<[u8]> = Box::new([0u8; libpcap::PCAP_ERRBUF_SIZE as usize]);
+        Self(buf)
+    }
+
+    /// Return libpcap's error message as borrowed string.
+    fn as_str(&self) -> Result<&str> {
+        use std::ffi::CStr;
+        let cstr = unsafe { CStr::from_ptr(self.0.as_ptr() as *const libc::c_char) };
+        Ok(cstr.to_str()?)
+    }
+
+    /// Return libpcap's error message as String.
+    fn as_string(&self) -> Result<String> {
+        Ok(self.as_str()?.to_string())
+    }
+
+    fn as_mut_ptr<T>(&mut self) -> *mut T {
+        self.0.as_mut_ptr() as *mut T
     }
 }
 
@@ -518,7 +546,7 @@ impl PcapIfT {
         for interface in self.get_interfaces() {
             if interface.has_address(ip) {
                 log::trace!("find_interface_with_ip({}) = {:?}", ip, interface);
-                return Some(interface.name);
+                return Some(interface.name.into_string());
             }
         }
         None
@@ -537,9 +565,9 @@ impl Drop for PcapIfT {
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Interface {
     /// Devices name
-    pub name: String,
+    pub name: Box<str>,
     /// Devices description
-    pub description: Option<String>,
+    pub description: Option<Box<str>>,
     /// All addresses found from device
     pub addresses: BTreeSet<InterfaceAddress>,
     /// Flags set for device
@@ -564,7 +592,7 @@ impl Interface {
 
     /// True if interface is has name `name`
     pub fn has_name(&self, name: &str) -> bool {
-        self.name == name
+        self.name.as_ref() == name
     }
 
     /// Return MAC aka Ethernet address of the interface
