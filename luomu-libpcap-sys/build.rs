@@ -4,10 +4,9 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use libflate::gzip::Decoder;
 use tar::Archive;
 
-static VERSION: &str = "1.10.4";
+static VERSION: &str = "1.10.5";
 
 fn main() -> io::Result<()> {
     let out_dir = env::var("OUT_DIR").expect("environment variable OUT_DIR");
@@ -24,13 +23,13 @@ fn main() -> io::Result<()> {
 
 fn unpack_libpcap(out_dir: &str) -> io::Result<PathBuf> {
     eprintln!("*** UNPACK_LIBPCAP");
-    let dest = format!("{}/src", out_dir);
+    let dest = format!("{out_dir}/src");
 
-    let base = format!("libpcap-{}", VERSION);
-    let full = format!("{}.tar.gz", base);
+    let base = format!("libpcap-{VERSION}");
+    let full = format!("{base}.tar.xz");
     let fp = fs::File::open(full)?;
 
-    let gunzipped = Decoder::new(fp)?;
+    let gunzipped = liblzma::read::XzDecoder::new(fp);
     let mut untar = Archive::new(gunzipped);
 
     untar.unpack(&dest).or_else(|err| {
@@ -41,7 +40,7 @@ fn unpack_libpcap(out_dir: &str) -> io::Result<PathBuf> {
         Err(err)
     })?;
 
-    let ret = format!("{}/{}", dest, base);
+    let ret = format!("{dest}/{base}");
     Ok(ret.into())
 }
 

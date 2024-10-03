@@ -1,13 +1,13 @@
 #!/bin/sh -e
 
-LIBPCAP='libpcap-1.10.4'
+LIBPCAP='libpcap-1.10.5'
 
-./verify.sh "${LIBPCAP}.tar.gz"
+./verify.sh "${LIBPCAP}.tar.xz"
 
 DEST=$(mktemp -d)
 mkdir -p "${DEST}"
 
-gunzip -c "${LIBPCAP}.tar.gz" | tar xf - -C "${DEST}"
+xz -c "${LIBPCAP}.tar.xz" | tar xf - -C "${DEST}"
 
 bindgen \
     "${DEST}/${LIBPCAP}/pcap/pcap.h" \
