@@ -19,5 +19,5 @@ libc = { version = "0.2", features = [ "extra_traits" ] }
 
 [build-dependencies]
 cc = "1"
-libflate = "2"
+liblzma = { version = "0.3", features = ["static"] }
 tar = {version = "0.4", default-features = false }
