@@ -12,7 +12,7 @@ jobs:
           - stable
           - beta
           - nightly
-          - 1.74.1  # MSRV
+          - 1.77.2  # MSRV
 
     steps:
       - name: Install dependencies
