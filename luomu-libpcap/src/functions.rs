@@ -50,7 +50,7 @@ pub fn pcap_create(source: &str) -> Result<PcapT> {
 
     trace!("pcap_create({}) => {:p}", source, pcap_t);
     if pcap_t.is_null() {
-        return Err(Error::PcapError(errbuf.as_string()?));
+        errbuf.as_error()?;
     }
     Ok(PcapT {
         pcap_t,
@@ -72,7 +72,7 @@ pub fn pcap_open_offline<P: AsRef<Path>>(savefile: P) -> Result<PcapT> {
 
     trace!("pcap_open_offline({:?}) => {:p}", fname, pcap_t);
     if pcap_t.is_null() {
-        return Err(Error::PcapError(errbuf.as_string()?));
+        errbuf.as_error()?;
     }
     Ok(PcapT {
         pcap_t,
@@ -174,7 +174,7 @@ pub fn pcap_set_nonblock(pcap_t: &PcapT, nonblock: bool) -> Result<()> {
     let ret = unsafe { libpcap::pcap_setnonblock(pcap_t.pcap_t, arg, errbuf.as_mut_ptr()) };
     match ret {
         PCAP_SUCCESS => Ok(()),
-        PCAP_ERROR => Err(Error::PcapError(errbuf.as_string()?)),
+        PCAP_ERROR => errbuf.as_error(),
         n => Err(Error::PcapErrorCode(n)),
     }
 }
@@ -497,7 +497,7 @@ pub fn pcap_findalldevs() -> Result<PcapIfT> {
             trace!("pcap_findalldevs() => {:p}", pcap_if_t);
             Ok(PcapIfT { pcap_if_t })
         }
-        PCAP_ERROR => Err(Error::PcapError(errbuf.as_string()?)),
+        PCAP_ERROR => errbuf.as_error(),
         n => Err(Error::PcapErrorCode(n)),
     }
 }

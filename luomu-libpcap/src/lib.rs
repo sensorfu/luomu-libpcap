@@ -229,6 +229,11 @@ impl Errbuf {
         Ok(self.as_str()?.to_string())
     }
 
+    /// Return libcap's error as [Error] type.
+    fn as_error<T>(&self) -> Result<T> {
+        Err(Error::PcapError(self.as_string()?))
+    }
+
     fn as_mut_ptr<T>(&mut self) -> *mut T {
         self.0.as_mut_ptr() as *mut T
     }
