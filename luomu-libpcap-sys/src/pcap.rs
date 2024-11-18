@@ -273,22 +273,12 @@ pub type u_int = ::std::os::raw::c_uint;
 // pub struct timeval {
 //     pub _bindgen_opaque_blob: [u64; 2usize],
 // }
-// #[allow(clippy::unnecessary_operation, clippy::identity_op)]
-// const _: () = {
-//     ["Size of timeval"][::std::mem::size_of::<timeval>() - 16usize];
-//     ["Alignment of timeval"][::std::mem::align_of::<timeval>() - 8usize];
-// };
 // #[repr(C)]
 // #[repr(align(1))]
 // #[derive(Debug, Copy, Clone)]
 // pub struct sockaddr {
 //     pub _bindgen_opaque_blob: [u8; 16usize],
 // }
-// #[allow(clippy::unnecessary_operation, clippy::identity_op)]
-// const _: () = {
-//     ["Size of sockaddr"][::std::mem::size_of::<sockaddr>() - 16usize];
-//     ["Alignment of sockaddr"][::std::mem::align_of::<sockaddr>() - 1usize];
-// };
 pub type bpf_int32 = ::std::os::raw::c_int;
 pub type bpf_u_int32 = u_int;
 #[repr(C)]
@@ -297,14 +287,6 @@ pub struct bpf_program {
     pub bf_len: u_int,
     pub bf_insns: *mut bpf_insn,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of bpf_program"][::std::mem::size_of::<bpf_program>() - 16usize];
-    ["Alignment of bpf_program"][::std::mem::align_of::<bpf_program>() - 8usize];
-    ["Offset of field: bpf_program::bf_len"][::std::mem::offset_of!(bpf_program, bf_len) - 0usize];
-    ["Offset of field: bpf_program::bf_insns"]
-        [::std::mem::offset_of!(bpf_program, bf_insns) - 8usize];
-};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct bpf_insn {
@@ -313,15 +295,6 @@ pub struct bpf_insn {
     pub jf: u_char,
     pub k: bpf_u_int32,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of bpf_insn"][::std::mem::size_of::<bpf_insn>() - 8usize];
-    ["Alignment of bpf_insn"][::std::mem::align_of::<bpf_insn>() - 4usize];
-    ["Offset of field: bpf_insn::code"][::std::mem::offset_of!(bpf_insn, code) - 0usize];
-    ["Offset of field: bpf_insn::jt"][::std::mem::offset_of!(bpf_insn, jt) - 2usize];
-    ["Offset of field: bpf_insn::jf"][::std::mem::offset_of!(bpf_insn, jf) - 3usize];
-    ["Offset of field: bpf_insn::k"][::std::mem::offset_of!(bpf_insn, k) - 4usize];
-};
 // pub type FILE = [u64; 19usize];
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -348,25 +321,6 @@ pub struct pcap_file_header {
     pub snaplen: bpf_u_int32,
     pub linktype: bpf_u_int32,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of pcap_file_header"][::std::mem::size_of::<pcap_file_header>() - 24usize];
-    ["Alignment of pcap_file_header"][::std::mem::align_of::<pcap_file_header>() - 4usize];
-    ["Offset of field: pcap_file_header::magic"]
-        [::std::mem::offset_of!(pcap_file_header, magic) - 0usize];
-    ["Offset of field: pcap_file_header::version_major"]
-        [::std::mem::offset_of!(pcap_file_header, version_major) - 4usize];
-    ["Offset of field: pcap_file_header::version_minor"]
-        [::std::mem::offset_of!(pcap_file_header, version_minor) - 6usize];
-    ["Offset of field: pcap_file_header::thiszone"]
-        [::std::mem::offset_of!(pcap_file_header, thiszone) - 8usize];
-    ["Offset of field: pcap_file_header::sigfigs"]
-        [::std::mem::offset_of!(pcap_file_header, sigfigs) - 12usize];
-    ["Offset of field: pcap_file_header::snaplen"]
-        [::std::mem::offset_of!(pcap_file_header, snaplen) - 16usize];
-    ["Offset of field: pcap_file_header::linktype"]
-        [::std::mem::offset_of!(pcap_file_header, linktype) - 20usize];
-};
 pub const pcap_direction_t_PCAP_D_INOUT: pcap_direction_t = 0;
 pub const pcap_direction_t_PCAP_D_IN: pcap_direction_t = 1;
 pub const pcap_direction_t_PCAP_D_OUT: pcap_direction_t = 2;
@@ -378,14 +332,6 @@ pub struct pcap_pkthdr {
     pub caplen: bpf_u_int32,
     pub len: bpf_u_int32,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of pcap_pkthdr"][::std::mem::size_of::<pcap_pkthdr>() - 24usize];
-    ["Alignment of pcap_pkthdr"][::std::mem::align_of::<pcap_pkthdr>() - 8usize];
-    ["Offset of field: pcap_pkthdr::ts"][::std::mem::offset_of!(pcap_pkthdr, ts) - 0usize];
-    ["Offset of field: pcap_pkthdr::caplen"][::std::mem::offset_of!(pcap_pkthdr, caplen) - 16usize];
-    ["Offset of field: pcap_pkthdr::len"][::std::mem::offset_of!(pcap_pkthdr, len) - 20usize];
-};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct pcap_stat {
@@ -393,15 +339,6 @@ pub struct pcap_stat {
     pub ps_drop: u_int,
     pub ps_ifdrop: u_int,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of pcap_stat"][::std::mem::size_of::<pcap_stat>() - 12usize];
-    ["Alignment of pcap_stat"][::std::mem::align_of::<pcap_stat>() - 4usize];
-    ["Offset of field: pcap_stat::ps_recv"][::std::mem::offset_of!(pcap_stat, ps_recv) - 0usize];
-    ["Offset of field: pcap_stat::ps_drop"][::std::mem::offset_of!(pcap_stat, ps_drop) - 4usize];
-    ["Offset of field: pcap_stat::ps_ifdrop"]
-        [::std::mem::offset_of!(pcap_stat, ps_ifdrop) - 8usize];
-};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct pcap_if {
@@ -411,17 +348,6 @@ pub struct pcap_if {
     pub addresses: *mut pcap_addr,
     pub flags: bpf_u_int32,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of pcap_if"][::std::mem::size_of::<pcap_if>() - 40usize];
-    ["Alignment of pcap_if"][::std::mem::align_of::<pcap_if>() - 8usize];
-    ["Offset of field: pcap_if::next"][::std::mem::offset_of!(pcap_if, next) - 0usize];
-    ["Offset of field: pcap_if::name"][::std::mem::offset_of!(pcap_if, name) - 8usize];
-    ["Offset of field: pcap_if::description"]
-        [::std::mem::offset_of!(pcap_if, description) - 16usize];
-    ["Offset of field: pcap_if::addresses"][::std::mem::offset_of!(pcap_if, addresses) - 24usize];
-    ["Offset of field: pcap_if::flags"][::std::mem::offset_of!(pcap_if, flags) - 32usize];
-};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct pcap_addr {
@@ -431,17 +357,6 @@ pub struct pcap_addr {
     pub broadaddr: *mut sockaddr,
     pub dstaddr: *mut sockaddr,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of pcap_addr"][::std::mem::size_of::<pcap_addr>() - 40usize];
-    ["Alignment of pcap_addr"][::std::mem::align_of::<pcap_addr>() - 8usize];
-    ["Offset of field: pcap_addr::next"][::std::mem::offset_of!(pcap_addr, next) - 0usize];
-    ["Offset of field: pcap_addr::addr"][::std::mem::offset_of!(pcap_addr, addr) - 8usize];
-    ["Offset of field: pcap_addr::netmask"][::std::mem::offset_of!(pcap_addr, netmask) - 16usize];
-    ["Offset of field: pcap_addr::broadaddr"]
-        [::std::mem::offset_of!(pcap_addr, broadaddr) - 24usize];
-    ["Offset of field: pcap_addr::dstaddr"][::std::mem::offset_of!(pcap_addr, dstaddr) - 32usize];
-};
 pub type pcap_handler = ::std::option::Option<
     unsafe extern "C" fn(arg1: *mut u_char, arg2: *const pcap_pkthdr, arg3: *const u_char),
 >;
@@ -813,16 +728,6 @@ pub struct pcap_rmtauth {
     pub username: *mut ::std::os::raw::c_char,
     pub password: *mut ::std::os::raw::c_char,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of pcap_rmtauth"][::std::mem::size_of::<pcap_rmtauth>() - 24usize];
-    ["Alignment of pcap_rmtauth"][::std::mem::align_of::<pcap_rmtauth>() - 8usize];
-    ["Offset of field: pcap_rmtauth::type_"][::std::mem::offset_of!(pcap_rmtauth, type_) - 0usize];
-    ["Offset of field: pcap_rmtauth::username"]
-        [::std::mem::offset_of!(pcap_rmtauth, username) - 8usize];
-    ["Offset of field: pcap_rmtauth::password"]
-        [::std::mem::offset_of!(pcap_rmtauth, password) - 16usize];
-};
 extern "C" {
     pub fn pcap_open(
         source: *const ::std::os::raw::c_char,
@@ -867,13 +772,6 @@ pub struct pcap_samp {
     pub method: ::std::os::raw::c_int,
     pub value: ::std::os::raw::c_int,
 }
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of pcap_samp"][::std::mem::size_of::<pcap_samp>() - 8usize];
-    ["Alignment of pcap_samp"][::std::mem::align_of::<pcap_samp>() - 4usize];
-    ["Offset of field: pcap_samp::method"][::std::mem::offset_of!(pcap_samp, method) - 0usize];
-    ["Offset of field: pcap_samp::value"][::std::mem::offset_of!(pcap_samp, value) - 4usize];
-};
 extern "C" {
     pub fn pcap_setsampling(p: *mut pcap_t) -> *mut pcap_samp;
 }

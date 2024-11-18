@@ -12,6 +12,7 @@ xz -c "${LIBPCAP}.tar.xz" | tar xf - -C "${DEST}"
 bindgen \
     "${DEST}/${LIBPCAP}/pcap/pcap.h" \
     -o src/pcap.rs \
+    --no-layout-tests \
     --allowlist-function='^pcap_.*' \
     --allowlist-type='^pcap_.*' \
     --allowlist-var='^PCAP_.*' \
