@@ -1,0 +1,5 @@
+[build]
+pre-build = [
+    "apt-get -y update",
+    "apt-get -y install flex bison",
+]
