@@ -230,7 +230,7 @@ mod tests {
         assert!(a.is_unspecified());
 
         let mut b = Source::new(Ipv4Addr::UNSPECIFIED);
-        *b = Ipv4Addr::BROADCAST.into();
+        *b = Ipv4Addr::BROADCAST;
         assert_eq!(*b, Ipv4Addr::BROADCAST);
         assert!(b.is_broadcast());
     }
