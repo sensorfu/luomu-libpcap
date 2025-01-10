@@ -26,6 +26,10 @@ pub use directed_addr::{Destination, Source};
 mod addr_pair;
 pub use addr_pair::{AddrPair, IPPair, MacPair, PortPair};
 
+/// Functions to check if IP addresses are valid for source, destination or
+/// forwardable
+pub mod ipaddr;
+
 /// Invalid address error
 #[derive(Debug)]
 pub struct InvalidAddress;
