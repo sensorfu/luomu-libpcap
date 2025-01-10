@@ -397,7 +397,7 @@ impl<'p> PcapIter<'p> {
     }
 }
 
-impl<'p> Iterator for PcapIter<'p> {
+impl Iterator for PcapIter<'_> {
     type Item = BorrowedPacket;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -436,7 +436,7 @@ impl<'p> NonBlockingIter<'p> {
     }
 }
 
-impl<'p> Iterator for NonBlockingIter<'p> {
+impl Iterator for NonBlockingIter<'_> {
     type Item = Result<BorrowedPacket>;
 
     fn next(&mut self) -> Option<Self::Item> {
