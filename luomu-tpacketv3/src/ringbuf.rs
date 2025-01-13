@@ -46,7 +46,7 @@ impl<'a> PacketDescriptor<'a> {
     }
 }
 
-impl<'a> From<*mut u8> for PacketDescriptor<'a> {
+impl From<*mut u8> for PacketDescriptor<'_> {
     #[allow(clippy::cast_ptr_alignment)]
     fn from(ptr: *mut u8) -> Self {
         let hdr_ptr = ptr as *const if_packet::tpacket3_hdr;
@@ -55,12 +55,12 @@ impl<'a> From<*mut u8> for PacketDescriptor<'a> {
     }
 }
 
-#[derive(Debug)]
 /// Descriptor for a block inside the mmapped ringbuffer.
+///
 /// Block is either owned by kernel or ready. Ready block contains 1 or more
-/// packets which can be read. Once all packets have been consumed,
-/// flush() needs to be called to indicate kernel that it free to use this
-/// block again
+/// packets which can be read. Once all packets have been consumed, flush()
+/// needs to be called to indicate kernel that it free to use this block again
+#[derive(Debug)]
 pub struct BlockDescriptor<'a> {
     ptr: *mut u8,                                // pointer to the start of the data
     desc: &'a mut if_packet::tpacket_block_desc, // the actual block descriptor
@@ -86,7 +86,7 @@ impl<'a> BlockDescriptor<'a> {
     }
 }
 
-impl<'a> From<*mut u8> for BlockDescriptor<'a> {
+impl From<*mut u8> for BlockDescriptor<'_> {
     #[allow(clippy::cast_ptr_alignment)]
     fn from(ptr: *mut u8) -> Self {
         let desc_ptr = ptr as *mut if_packet::tpacket_block_desc;
@@ -168,7 +168,7 @@ impl Map {
 
 impl Drop for Map {
     fn drop(&mut self) {
-        trace!("Dropping mapping @{:?}", self.ptr);
+        log::trace!("Dropping mapping @{:?}", self.ptr);
         unsafe { libc::munmap(self.ptr, self.map_size) };
     }
 }

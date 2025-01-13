@@ -1,4 +1,5 @@
-// structures, types and constants from <linux/if_packet.h>
+//! structures, types and constants from <linux/if_packet.h>
+
 #![allow(dead_code)] // not all declared types are used yet
 
 pub const TPACKET_V3: libc::c_int = 2;
@@ -30,6 +31,7 @@ pub const TP_STATUS_VLAN_VALID: u32 = 1 << 4;
 pub const TP_STATUS_VLAN_TPID_VALID: u32 = 1 << 6;
 
 #[repr(C)]
+#[allow(non_camel_case_types)]
 pub struct tpacket_req3 {
     pub tp_block_size: libc::c_uint,
     pub tp_block_nr: libc::c_uint,
@@ -40,16 +42,19 @@ pub struct tpacket_req3 {
     pub tp_feature_req_word: libc::c_uint,
 }
 
-#[derive(Debug)]
 #[repr(C)]
+#[derive(Debug)]
+#[allow(non_camel_case_types)]
 pub struct tpacket_hdr_variant1 {
     pub tp_rxhash: u32,
     pub tp_vlan_tci: u32,
     pub tp_vlan_tpid: u16,
     tp_padding: u16,
 }
-#[derive(Debug)]
+
 #[repr(C)]
+#[derive(Debug)]
+#[allow(non_camel_case_types)]
 pub struct tpacket3_hdr {
     pub tp_next_offset: u32,
     pub tp_sec: u32,
@@ -63,15 +68,17 @@ pub struct tpacket3_hdr {
     tp_padding: [u8; 8],
 }
 
-#[derive(Debug)]
 #[repr(C)]
+#[derive(Debug)]
+#[allow(non_camel_case_types)]
 pub struct tpacket_bd_ts {
     pub ts_sec: libc::c_uint,
     pub ts_nsec: libc::c_uint, // really an union of ts_usec & ts_nsec
 }
 
-#[derive(Debug)]
 #[repr(C)]
+#[derive(Debug)]
+#[allow(non_camel_case_types)]
 pub struct tpacket_hdr_v1 {
     pub block_status: u32,
     pub num_packets: u32,
@@ -82,16 +89,18 @@ pub struct tpacket_hdr_v1 {
     pub ts_last_packet: tpacket_bd_ts,
 }
 
-#[derive(Debug)]
 #[repr(C)]
+#[derive(Debug)]
+#[allow(non_camel_case_types)]
 pub struct tpacket_block_desc {
     pub version: u32,
     pub offset_to_priv: u32,
     pub hdr: tpacket_hdr_v1,
 }
 
-#[derive(Debug, Clone, Copy)]
 #[repr(C)]
+#[derive(Debug, Clone, Copy)]
+#[allow(non_camel_case_types)]
 pub struct tpacket_stats_v3 {
     pub tp_packets: libc::c_uint,
     pub tp_drops: libc::c_uint,

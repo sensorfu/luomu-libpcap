@@ -1,10 +1,4 @@
 #![cfg(target_os = "linux")]
-// Remove after Clippy stops nagging about this.
-// Upstream issue: https://github.com/rust-lang/rust-clippy/issues/6974
-#![allow(clippy::upper_case_acronyms)]
-
-#[macro_use]
-extern crate log;
 
 use std::error::Error;
 use std::ffi::CString;
@@ -17,15 +11,15 @@ mod if_packet;
 mod ringbuf;
 mod socket;
 
-// Get interface index for given interface name using if_nametoindex
+/// Get interface index for given interface name using if_nametoindex
 fn ifindex_for(ifname: &str) -> libc::c_uint {
     let ifname_c = CString::new(ifname).unwrap(); // XXX unwrap
     unsafe { libc::if_nametoindex(ifname_c.as_ptr()) }
 }
 
-/// Fanout mode to use for spreading traffic across sockets.
-/// Requires as a parameter the fanout group ID. See packet(7)
-// for description of different fanout modes.
+/// Fanout mode to use for spreading traffic across sockets. Requires as a
+/// parameter the fanout group ID. See packet(7) for description of different
+/// fanout modes.
 #[derive(Copy, Clone)]
 pub enum FanoutMode {
     HASH(u16),
@@ -69,10 +63,12 @@ impl FanoutMode {
     }
 }
 
-/// Parameters for tpacket reader. These parameters are used to configure
-/// the memory allocated for packet receive ringbuffer and fanout mode
-// to use. See https://www.kernel.org/doc/Documentation/networking/packet_mmap.txt
-// for detailed information about the configuration.
+/// Parameters for tpacket reader.
+///
+/// These parameters are used to configure the memory allocated for packet
+/// receive ringbuffer and fanout mode to use. See
+/// <https://www.kernel.org/doc/Documentation/networking/packet_mmap.txt> for
+/// detailed information about the configuration.
 #[derive(Copy, Clone)]
 pub struct ReaderParameters {
     /// Size for a single block. Needs to be a multiple of pagesize
@@ -103,11 +99,11 @@ impl ReaderParameters {
 }
 
 /// Reader instance to use for reading captured packets.
-/// Use `wait_block()` to get iterator for packets within that block.
-/// Once all packets have been consumed call `flush_block()` to indicate
-/// kernel that the block can once again be filled with packets. After
-/// `flush_block()` has been called, `wait_block()` can be used to wait
-/// for next block to fill.
+///
+/// Use `wait_block()` to get iterator for packets within that block. Once all
+/// packets have been consumed call `flush_block()` to indicate kernel that the
+/// block can once again be filled with packets. After `flush_block()` has been
+/// called, `wait_block()` can be used to wait for next block to fill.
 pub struct Reader<'a> {
     // Map is not accessed, but needs to be dropped once Reader is dropped. Not before.
     #[allow(dead_code)]
@@ -119,17 +115,19 @@ pub struct Reader<'a> {
 }
 
 /// Get new reader instance reading packets from given interface.
+///
 /// `pcap_filter` should contain "libpcap filter string" that can be used to
-/// filter incoming traffic or None to indicate that no filtering should be done.
-/// The `parameters` are used to configure the ringbuffer used for capturing.
-/// On success returns `Reader` instance to use to read captured packets.
+/// filter incoming traffic or None to indicate that no filtering should be
+/// done. The `parameters` are used to configure the ringbuffer used for
+/// capturing. On success returns `Reader` instance to use to read captured
+/// packets.
 pub fn reader<'a>(
     interface: &str,
     pcap_filter: Option<&str>,
     parameters: ReaderParameters,
 ) -> Result<Reader<'a>, String> {
     let index = ifindex_for(interface);
-    trace!("Index for interface {} is {}", interface, index);
+    log::trace!("Index for interface {} is {}", interface, index);
     let sock = socket::Fd::create().map_err(|e| format!("Can not create socket {}", e))?;
 
     // try to compile the filter, if one is set, first
@@ -142,7 +140,7 @@ pub fn reader<'a>(
     let opt = socket::OptValue {
         val: if_packet::TPACKET_V3,
     };
-    trace!("Setting packet version");
+    log::trace!("Setting packet version");
     sock.setopt(socket::Option::PacketVersion(opt))
         .map_err(|e| format!("packet version sockopt failed: {}", e))?;
 
@@ -156,17 +154,17 @@ pub fn reader<'a>(
         tp_sizeof_priv: 0,
     };
 
-    trace!("setting RX_PACKET request");
+    log::trace!("setting RX_PACKET request");
     sock.setopt(socket::Option::PacketRxRing(socket::OptValue { val: req }))
         .map_err(|e| format!("RX_RING sockopt failed: {}", e))?;
 
     if let Some(f) = filter {
-        trace!("setting filter");
+        log::trace!("setting filter");
         sock.set_filter(f)
             .map_err(|e| format!("Can not set filter: {}", e))?;
     }
 
-    trace!("Setting PROMISC mode");
+    log::trace!("Setting PROMISC mode");
     let mr = libc::packet_mreq {
         mr_ifindex: index as libc::c_int,
         mr_type: libc::PACKET_MR_PROMISC as u16,
@@ -178,11 +176,11 @@ pub fn reader<'a>(
     }))
     .map_err(|e| format!("ADD_MEMBERSHIP sockopt failed: {}", e))?;
 
-    trace!("Mapping ring");
+    log::trace!("Mapping ring");
     let map = ringbuf::Map::create(parameters.block_size, parameters.block_count, sock.raw_fd())
         .map_err(|e| format!("Can not mmap for ringbuffer: {}", e))?;
 
-    trace!("binding to interface");
+    log::trace!("binding to interface");
     let ll = libc::sockaddr_ll {
         sll_family: libc::AF_PACKET as u16,
         sll_protocol: socket::htons(libc::ETH_P_ALL as u16),
@@ -196,7 +194,7 @@ pub fn reader<'a>(
         .map_err(|e| format!("Can not bind socket to interface: {}", e))?;
 
     if let Some(mode) = parameters.fanout {
-        trace!("Setting fanout mode {:0X}", mode.arg());
+        log::trace!("Setting fanout mode {:0X}", mode.arg());
         sock.setopt(socket::Option::PacketFanout(socket::OptValue {
             val: mode.arg(),
         }))
@@ -282,7 +280,7 @@ impl<'a> Reader<'a> {
     /// not be called.
     pub fn wait_block(&self, timeout: Duration) -> Result<PacketIter<'a>, WaitError> {
         let idx = self.block_index;
-        trace!("Waiting block {}", idx);
+        log::trace!("Waiting block {}", idx);
         match self.sock.poll(timeout) {
             Ok(ready) => {
                 if !ready {
@@ -293,7 +291,7 @@ impl<'a> Reader<'a> {
                 }
                 let pkt = self.blocks[idx].get_first_packet();
                 let count = self.blocks[idx].get_number_of_packets();
-                trace!("Block {} ready with {} packets", idx, count);
+                log::trace!("Block {} ready with {} packets", idx, count);
                 Ok(PacketIter {
                     pkt: Some(pkt),
                     count,
@@ -308,15 +306,15 @@ impl<'a> Reader<'a> {
     /// ready for capturing new packets and advance `Reader` to poll next
     /// block when `wait_block()` is called.
     pub fn flush_block(&mut self) {
-        trace!("Flushing block {}", self.block_index);
+        log::trace!("Flushing block {}", self.block_index);
         self.blocks[self.block_index].flush();
         self.block_index = (self.block_index + 1) % self.blocks.len();
     }
 }
 
-impl<'a> Drop for Reader<'a> {
+impl Drop for Reader<'_> {
     fn drop(&mut self) {
-        trace!("Dropping reader");
+        log::trace!("Dropping reader");
         self.sock.close();
     }
 }
@@ -377,7 +375,7 @@ impl<'a> Iterator for PacketIter<'a> {
             if self.index >= self.count {
                 None
             } else {
-                trace!("Consuming packet {}/{}", self.index, self.count);
+                log::trace!("Consuming packet {}/{}", self.index, self.count);
                 let vlan_tci = if pkt.has_vlan_tci() {
                     Some(pkt.get_vlan_tci())
                 } else {
@@ -401,14 +399,5 @@ impl<'a> Iterator for PacketIter<'a> {
         } else {
             None
         }
-    }
-}
-
-#[cfg(test)]
-
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
     }
 }
