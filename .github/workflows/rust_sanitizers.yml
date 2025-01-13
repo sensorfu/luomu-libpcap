@@ -7,8 +7,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        sanitizer: [address]
+        os: [ ubuntu-latest, macos-latest ]
+        sanitizer: [ address ]
 
     steps:
       - name: Install dependencies
@@ -20,10 +20,10 @@ jobs:
           rustup toolchain install nightly --profile minimal --component rust-src
           rustup override set nightly
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
         with:
-          key: ${{ matrix.toolchain }}-${{ matrix.os }}-${{ matrix.sanitizer }}-sanitizer
+          key: ${{ matrix.os }}-${{ matrix.sanitizer }}-sanitizer
 
       - run: |
           echo "TARGET=$(rustc -vV | awk '/^host: / { print $2 }')" >>${GITHUB_ENV}
