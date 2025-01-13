@@ -5,11 +5,6 @@ use luomu_libpcap::PcapFilter;
 
 use crate::if_packet;
 
-// at least on alpine 3.15, SO_ATTCH_FILTER is not defined on libc crate
-#[cfg(target_env = "musl")]
-const SO_ATTACH_FILTER: libc::c_int = 26;
-
-#[cfg(not(target_env = "musl"))]
 const SO_ATTACH_FILTER: libc::c_int = libc::SO_ATTACH_FILTER;
 
 pub fn htons(val: u16) -> u16 {
@@ -94,10 +89,10 @@ impl Fd {
         let proto = htons(libc::ETH_P_ALL as u16);
         let fd = unsafe { libc::socket(libc::AF_PACKET, libc::SOCK_RAW, proto as libc::c_int) };
         if fd < 0 {
-            warn!("Unable to create socket");
+            log::warn!("Unable to create socket");
             return Err(std::io::Error::last_os_error());
         }
-        trace!("Created socket with fd={}", fd);
+        log::trace!("Created socket with fd={}", fd);
         Ok(Fd { fd })
     }
 
@@ -106,7 +101,7 @@ impl Fd {
     }
 
     pub fn setopt<T>(&self, opt: Option<T>) -> Result<(), std::io::Error> {
-        trace!(
+        log::trace!(
             "option value ptr={:?} oplen={}",
             opt.val().ptr(),
             opt.val().optlen()
@@ -160,12 +155,12 @@ impl Fd {
     }
 
     pub fn close(self) {
-        trace!("Closing socket with fd={}", self.fd);
+        log::trace!("Closing socket with fd={}", self.fd);
         unsafe { libc::close(self.fd) };
     }
 
     /// Poll this fd for availability of data
-    /// Returns Ok(false) if no data was available witin timeout (XXX)
+    /// Returns Ok(false) if no data was available within timeout (XXX)
     /// Ok(true) if there is data available
     pub fn poll(&self, timeout: Duration) -> Result<bool, std::io::Error> {
         let mut pfd = libc::pollfd {
@@ -198,6 +193,7 @@ impl Fd {
 // program is represented, just trust that the PcapFilter will provide
 // us with pointer to proper struct.
 #[repr(C)]
+#[allow(non_camel_case_types)]
 struct sock_fprog {
     len: u16,
     filter: *const libc::c_void,
