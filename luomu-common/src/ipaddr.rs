@@ -141,11 +141,11 @@ pub const fn is_valid_destination_ip6(ip: Ipv6Addr) -> bool {
     // We've skipped handling "2001::/23 IETF Protocol Assignments [RFC2928]"
     // since it's not valid with a footnote of "Unless allowed by a more
     // specific allocation."
-    !(matches!(ip.segments(), [0, 0, 0, 0, 0, 0, 0, 0])
+    !(ip.is_unspecified()
         || ip.is_loopback()
         || matches!(ip.segments(), [0, 0, 0, 0, 0, 0xffff, _, _])
         || matches!(ip.segments(), [0x2001, 0xdb8, _, _, _, _, _, _])
-        || (ip.segments()[0] == 0x3fff && ip.segments()[1] >> 12 == 0))
+        || ((ip.segments()[0] == 0x3fff) && (ip.segments()[1] >> 12 == 0)))
 }
 
 /// Is this valid IPv6 forwardable address?
@@ -163,7 +163,7 @@ pub const fn is_valid_forwardable_ip6(ip: Ipv6Addr) -> bool {
 
     // If the value of "Destination" is FALSE, the values of "Forwardable" and
     // "Globally Reachable" must also be false.
-    !is_valid_destination_ip6(ip) && !(ip.segments()[0] & 0xffc0) == 0xfe80
+    is_valid_destination_ip6(ip) && !ip.is_unicast_link_local()
 }
 
 #[cfg(test)]
@@ -329,7 +329,7 @@ mod tests {
     #[test]
     fn test_is_valid_destination_ip4() {
         for ip in yield_invalid_destination_ip4() {
-            assert!(!is_valid_destination_ip4(ip))
+            assert!(!is_valid_destination_ip4(ip), "invalid ip {ip}");
         }
 
         for ip in yield_valid_ip4() {
