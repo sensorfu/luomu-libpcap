@@ -2,19 +2,37 @@ use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::str::FromStr;
 
+use crate::TagError;
+
 use super::InvalidAddress;
 
 /// A Mac address used for example with Ethernet.
 ///
 /// Mac address is handled as big endian value. All `From<T>` implementations
-/// returning `MacAddr` expect input as big endian. `From<u64>` also expects
+/// returning [MacAddr] expect input as big endian. `From<u64>` also expects
 /// address to reside in lowest 6 bytes. All `From<MacAddr>` and
 /// `TryFrom<MacAddr>` implementations return their bytes as big endian.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+///
+/// **Storing tag**:
+///
+/// The [MacAddr] type has space to store one VLAN ID (a tag). See
+/// [crate::TaggedMacAddr] for type with more space for storing tag stack.
+///
+/// **Comparison**:
+///
+/// [MacAddr] are compared fully with [PartialEq] and [Eq] including the VLAN
+/// tag. To compare only MAC address part use [MacAddr::eq_mac] or
+/// [MacAddr::eq_tag] to only compare VLAN tags.
+///
+/// **Sorting**:
+///
+/// [MacAddr]s are sorted by MAC address portion first and then by VLAN tags. So
+/// same MAC addresses should be grouped together.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MacAddr(u64);
 
 impl MacAddr {
-    /// A unspecified MAC address (00:00:00:00:00:00)
+    /// An unspecified MAC address (00:00:00:00:00:00)
     pub const UNSPECIFIED: MacAddr = MacAddr(0);
 
     /// A broadcast MAC address (FF:FF:FF:FF:FF:FF)
@@ -40,6 +58,57 @@ impl MacAddr {
         // the frame is meant to reach only one receiving NIC
         ((self.0 >> 40) & 0x01) == 0x01
     }
+
+    /// Compare the MAC address of two [MacAddr]s. Return true if the MAC
+    /// addresses are identical even if the tags are different.
+    pub const fn eq_mac(&self, other: &MacAddr) -> bool {
+        (self.0 ^ other.0) & MAC_BITS == 0
+    }
+
+    /// Compare tags of two [MacAddr]s. Return true if the tags are identical
+    /// even if the MAC addresses are different.
+    pub const fn eq_tag(&self, other: &MacAddr) -> bool {
+        (self.0 ^ other.0) & TAG_BITS == 0
+    }
+
+    /// Push VLAN tag.
+    pub const fn push_tag(&mut self, tag: u16) -> Result<(), TagError> {
+        if tag > 0x0FFF {
+            return Err(TagError::TooLargeTag);
+        }
+
+        self.0 = (self.0 & 0xF000FFFFFFFFFFFF) | ((tag as u64) << 48);
+        Ok(())
+    }
+
+    /// Pop a VLAN tag.
+    pub const fn pop_tag(&mut self) -> Option<u16> {
+        let Some(tag) = self.peek_tag() else {
+            return None;
+        };
+        _ = self.push_tag(0);
+        Some(tag)
+    }
+
+    /// Peek a tag, but don't pop it out.
+    pub const fn peek_tag(&self) -> Option<u16> {
+        match (self.0 >> 48) & 0x0FFF {
+            n if n > 0 => Some(n as u16),
+            _ => None,
+        }
+    }
+}
+
+impl Ord for MacAddr {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0.rotate_left(16).cmp(&other.0.rotate_left(16))
+    }
+}
+
+impl PartialOrd for MacAddr {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl From<[u8; 6]> for MacAddr {
@@ -51,11 +120,11 @@ impl From<[u8; 6]> for MacAddr {
 impl From<&[u8; 6]> for MacAddr {
     fn from(v: &[u8; 6]) -> Self {
         let r = (u64::from(v[0]) << 40)
-            + (u64::from(v[1]) << 32)
-            + (u64::from(v[2]) << 24)
-            + (u64::from(v[3]) << 16)
-            + (u64::from(v[4]) << 8)
-            + u64::from(v[5]);
+            | (u64::from(v[1]) << 32)
+            | (u64::from(v[2]) << 24)
+            | (u64::from(v[3]) << 16)
+            | (u64::from(v[4]) << 8)
+            | u64::from(v[5]);
         Self(r)
     }
 }
@@ -74,13 +143,13 @@ impl TryFrom<u64> for MacAddr {
 
 impl From<MacAddr> for u64 {
     fn from(mac: MacAddr) -> Self {
-        mac.0
+        Self::from(&mac)
     }
 }
 
 impl From<&MacAddr> for u64 {
     fn from(mac: &MacAddr) -> Self {
-        mac.0
+        mac.0 & 0x0000FFFFFFFFFFFF
     }
 }
 
@@ -109,11 +178,9 @@ impl FromStr for MacAddr {
                 addr[i] = v?;
                 Some((addr, i))
             })
-            .map_or(Err(InvalidAddress), |(val, i)| {
-                match i {
-                    5 => Ok(MacAddr::from(val)),
-                    _ => Err(InvalidAddress),
-                }
+            .map_or(Err(InvalidAddress), |(val, i)| match i {
+                5 => Ok(MacAddr::from(val)),
+                _ => Err(InvalidAddress),
             })
     }
 }
@@ -128,7 +195,8 @@ impl TryFrom<&str> for MacAddr {
 
 impl fmt::Display for MacAddr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let h = self.as_array()
+        let h = self
+            .as_array()
             .iter()
             .map(|b| format!("{:02x}", b))
             .collect::<Box<[String]>>()
@@ -149,7 +217,7 @@ mod tests {
 
     use quickcheck::quickcheck;
 
-    use super::MacAddr;
+    use super::{MacAddr, TagError};
 
     #[test]
     fn test_fmt_debug() {
@@ -245,12 +313,88 @@ mod tests {
         assert!(addr3.is_multicast());
     }
 
+    #[test]
+    fn test_eq_mac_tag() {
+        let mut addr1: MacAddr = "00:11:22:33:44:55".parse().unwrap();
+        let mut addr2: MacAddr = "00:11:22:33:44:55".parse().unwrap();
+        let mut addr3: MacAddr = "ff:ff:ff:ff:ff:ff".parse().unwrap();
+
+        assert!(addr1.eq_mac(&addr2));
+        assert!(!addr1.eq_mac(&addr3));
+
+        assert!(addr1.eq_tag(&addr2));
+        assert!(addr1.eq_tag(&addr3));
+
+        addr1.push_tag(42).unwrap();
+        addr2.push_tag(1337).unwrap();
+        addr3.push_tag(42).unwrap();
+
+        assert!(addr1.eq_mac(&addr2));
+        assert!(!addr1.eq_mac(&addr3));
+
+        assert!(!addr1.eq_tag(&addr2));
+        assert!(addr1.eq_tag(&addr3));
+    }
+
+    #[test]
+    fn test_macaddr_ordering() {
+        let mut addr1: MacAddr = "ff:ff:ff:ff:ff:ff".parse().unwrap();
+        let mut addr2: MacAddr = "00:11:22:33:44:55".parse().unwrap();
+        let mut addr3: MacAddr = "00:11:22:33:44:55".parse().unwrap();
+
+        addr1.push_tag(42).unwrap();
+        addr2.push_tag(1337).unwrap();
+        addr3.push_tag(42).unwrap();
+
+        let mut v = vec![addr1, addr2, addr3];
+        v.sort();
+
+        assert_eq!(v[0], addr3);
+        assert_eq!(v[1], addr2);
+        assert_eq!(v[2], addr1);
+    }
+
+    #[test]
+    fn test_push_pop_tag() {
+        let mut addr1: MacAddr = "00:11:22:33:44:55".parse().unwrap();
+        assert_eq!(addr1.pop_tag(), None);
+
+        addr1.push_tag(42).unwrap();
+        assert_eq!(addr1.pop_tag(), Some(42));
+
+        addr1.push_tag(3999).unwrap();
+        assert_eq!(addr1.pop_tag(), Some(3999));
+
+        addr1.push_tag(0).unwrap();
+        assert_eq!(addr1.pop_tag(), None);
+
+        assert_eq!(addr1.push_tag(0x0FFF + 1), Err(TagError::TooLargeTag));
+    }
+
     quickcheck! {
         fn prop_macaddr_to_from(xs: (u8, u8, u8, u8, u8, u8)) -> bool {
             let b1: [u8; 6] = [xs.0, xs.1, xs.2, xs.3, xs.4, xs.5];
             let mac = MacAddr::from(b1);
             let b2: [u8; 6] = mac.into();
             b1 == b2
+        }
+
+        fn prop_macaddr_vlan(xs: (u8, u8, u8, u8, u8, u8, u16)) -> bool {
+            let b1: [u8; 6] = [xs.0, xs.1, xs.2, xs.3, xs.4, xs.5];
+            let b2: [u8; 8] = [0, 0, xs.0, xs.1, xs.2, xs.3, xs.4, xs.5];
+            let vlan: u16 = xs.6 & 0x0FFF;
+            // Zero is special case for vlans
+            if vlan == 0 {
+                return true;
+            }
+            let mut mac = MacAddr::from(b1);
+            assert_eq!(mac.pop_tag(), None);
+            mac.push_tag(vlan).unwrap();
+
+            assert_eq!(mac.as_array(), b1);
+            assert_eq!(u64::from(mac), u64::from_be_bytes(b2));
+
+            vlan == mac.pop_tag().unwrap()
         }
     }
 }
