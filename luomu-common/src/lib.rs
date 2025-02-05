@@ -16,6 +16,9 @@ pub use directed_addr::{Destination, Source};
 mod addr_pair;
 pub use addr_pair::{AddrPair, IPPair, MacPair, PortPair};
 
+mod tagged_macaddr;
+pub use tagged_macaddr::TaggedMacAddr;
+
 /// Functions to check if IP addresses are valid for source, destination or
 /// forwardable
 pub mod ipaddr;

@@ -2,9 +2,13 @@ use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::str::FromStr;
 
-use crate::TagError;
+use crate::{InvalidAddress, TagError};
 
-use super::InvalidAddress;
+// The MAC address portion of u64
+const MAC_BITS: u64 = 0x0000FFFFFFFFFFFF;
+
+// The VLAN tag portion of u64
+const TAG_BITS: u64 = 0x0FFF000000000000;
 
 /// A Mac address used for example with Ethernet.
 ///
@@ -36,18 +40,22 @@ impl MacAddr {
     pub const UNSPECIFIED: MacAddr = MacAddr(0);
 
     /// A broadcast MAC address (FF:FF:FF:FF:FF:FF)
-    pub const BROADCAST: MacAddr = MacAddr(0x0000FFFFFFFFFFFF);
+    pub const BROADCAST: MacAddr = MacAddr(MAC_BITS);
 
     /// Return MAC address as bytearray in big endian order.
     pub fn as_array(&self) -> [u8; 6] {
-        u64::from(self).to_be_bytes()[2..=7].try_into().unwrap()
+        // Taking range of [2,7] is safe from u64. See kani proof in bunnies
+        // module.
+        self.0.to_be_bytes()[2..=7]
+            .try_into()
+            .expect("this cannot happen")
     }
 }
 
 impl MacAddr {
     /// Checks if this address is unspecified (`00:00:00:00:00:00`) address.
     pub const fn is_unspecified(&self) -> bool {
-        self.0 & 0x0000FFFFFFFFFFFF == 0
+        self.0 & MAC_BITS == 0
     }
 
     /// Checks if this address is a multicast address.
@@ -77,7 +85,7 @@ impl MacAddr {
             return Err(TagError::TooLargeTag);
         }
 
-        self.0 = (self.0 & 0xF000FFFFFFFFFFFF) | ((tag as u64) << 48);
+        self.0 = (self.0 & !TAG_BITS) | ((tag as u64) << 48);
         Ok(())
     }
 
@@ -119,13 +127,9 @@ impl From<[u8; 6]> for MacAddr {
 
 impl From<&[u8; 6]> for MacAddr {
     fn from(v: &[u8; 6]) -> Self {
-        let r = (u64::from(v[0]) << 40)
-            | (u64::from(v[1]) << 32)
-            | (u64::from(v[2]) << 24)
-            | (u64::from(v[3]) << 16)
-            | (u64::from(v[4]) << 8)
-            | u64::from(v[5]);
-        Self(r)
+        Self(u64::from_be_bytes([
+            0, 0, v[0], v[1], v[2], v[3], v[4], v[5],
+        ]))
     }
 }
 
@@ -133,7 +137,7 @@ impl TryFrom<u64> for MacAddr {
     type Error = InvalidAddress;
 
     fn try_from(mac: u64) -> Result<Self, Self::Error> {
-        if mac > 0x0000FFFFFFFFFFFF {
+        if mac > MAC_BITS {
             return Err(InvalidAddress);
         }
 
@@ -149,7 +153,7 @@ impl From<MacAddr> for u64 {
 
 impl From<&MacAddr> for u64 {
     fn from(mac: &MacAddr) -> Self {
-        mac.0 & 0x0000FFFFFFFFFFFF
+        mac.0 & MAC_BITS
     }
 }
 
@@ -207,7 +211,11 @@ impl fmt::Display for MacAddr {
 
 impl fmt::Debug for MacAddr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "MacAddr({})", self)
+        if let Some(tag) = self.peek_tag() {
+            write!(f, "MacAddr({self}, tag: {tag})")
+        } else {
+            write!(f, "MacAddr({self})")
+        }
     }
 }
 
@@ -261,13 +269,13 @@ mod tests {
     fn test_from_str() {
         let expected: MacAddr = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55].into();
         let parsed: MacAddr = "00:11:22:33:44:55".try_into().unwrap();
-        assert_eq!(parsed, expected)
+        assert_eq!(parsed, expected);
     }
     #[test]
     fn test_parse() {
         let expected: MacAddr = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55].into();
         let parsed: MacAddr = "00:11:22:33:44:55".parse().unwrap();
-        assert_eq!(parsed, expected)
+        assert_eq!(parsed, expected);
     }
 
     #[test]
