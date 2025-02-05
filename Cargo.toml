@@ -8,6 +8,7 @@ repository = "https://github.com/sensorfu/luomu-libpcap"
 [workspace]
 resolver = "2"
 members = [
+	# "fuzz",
 	"luomu-common",
 	"luomu-libpcap",
 	"luomu-libpcap-sys",
