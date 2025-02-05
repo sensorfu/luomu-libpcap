@@ -1,37 +1,32 @@
 [package]
 name = "luomu-libpcap"
+description = "Rusty libpcap bindings"
 version = "0.1.0"
 authors = [ "Ossi Herrala <oherrala@iki.fi>" ]
 license.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-
-description = "Rusty libpcap bindings"
-homepage = "https://github.com/sensorfu/luomu-libpcap#readme"
-repository = "https://github.com/sensorfu/luomu-libpcap"
-documentation = "https://docs.rs/luomu-libpcap/"
-readme = "README.md"
-keywords = [ "pcap", "libpcap", "network" ]
-categories = [ "api-bindings", "network-programming" ]
+homepage.workspace = true
+repository.workspace = true
 
 [features]
 default = []
-async-tokio = [ "futures-core", "tokio" ]
+async-tokio = [ "dep:futures-core", "dep:tokio" ]
 
 [dependencies]
-bytes = { version = "1", optional = true }
-libc = { version = "0.2", default-features = false }
-log = { version = "0.4", default-features = false }
-luomu-common = { path = "../luomu-common" }
-luomu-libpcap-sys = { path = "../luomu-libpcap-sys" }
+bytes.workspace = true
+libc.workspace = true
+log.workspace = true
+luomu-common.workspace = true
+luomu-libpcap-sys.workspace = true
 
 # async-tokio
-futures-core = { version = "0.3", optional = true }
-tokio = { version = "1", optional = true, features = [ "rt-multi-thread", "sync" ] }
+futures-core = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
 
 [dev-dependencies]
-anyhow = "1"
-env_logger = { version = "0.11", default-features = false }
-futures-util = { version = "0.3", default-features = false }
-luomu-libpcap = { path = ".", features = [ "async-tokio" ] }
-tokio = { version = "1", features = [ "rt-multi-thread", "time" ] }
+anyhow.workspace = true
+env_logger.workspace = true
+futures-util.workspace = true
+luomu-libpcap = { workspace = true, features = [ "async-tokio" ] }
+tokio = { workspace = true, features = [ "time" ] }
