@@ -38,3 +38,25 @@ cc = "1"
 liblzma = { version = "0.3", features = ["static"] }
 tar = {version = "0.4", default-features = false }
 clap = { version = "4", features = [ "derive" ] }
+
+[workspace.lints.rust]
+# Lint groups
+deprecated-safe = { level = "deny", priority = -1 }
+future-incompatible = { level = "deny", priority = -1 }
+keyword-idents = { level = "deny", priority = -1 }
+let-underscore = { level = "deny", priority = -1 }
+nonstandard-style = { level = "deny", priority = -1 }
+refining-impl-trait = { level = "deny", priority = -1 }
+rust-2018-compatibility = { level = "deny", priority = -1 }
+rust-2018-idioms  = { level = "deny", priority = -1 }
+rust-2021-compatibility = { level = "deny", priority = -1 }
+rust-2024-compatibility = { level = "deny", priority = -1 }
+unused = { level = "deny", priority = -1 }
+
+# Lonely lints
+missing_docs = { level = "deny", priority = -1 }
+unsafe-code = "deny"
+
+# Remove these after moving to Rust 2024 edition
+tail_expr_drop_order = "allow"
+if_let_rescope = "allow"

@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 use luomu_libpcap::{Packet, Pcap, Result};
 
 fn main() -> Result<()> {

@@ -1,3 +1,4 @@
+#![allow(missing_docs, unsafe_code)]
 #![cfg(target_os = "linux")]
 
 use std::error::Error;
@@ -201,7 +202,7 @@ pub fn reader<'a>(
         .map_err(|e| format!("Could not set fanout mode: {}", e))?;
     }
 
-    let mut blocks: Vec<ringbuf::BlockDescriptor> = Vec::new();
+    let mut blocks: Vec<ringbuf::BlockDescriptor<'_>> = Vec::new();
     for i in 0..parameters.block_count {
         blocks.push(map.get_descriptor_ptr_for(i as isize).into());
     }

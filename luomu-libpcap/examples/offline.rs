@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 use std::env;
 
 use luomu_libpcap::{Packet, Pcap};
