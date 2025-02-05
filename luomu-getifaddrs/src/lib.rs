@@ -1,6 +1,7 @@
 //! This module provides access for addresses, both IP and MAC, assigned
 //! for network interfaces as well as statistics for a interface.
 #![cfg(unix)]
+#![allow(unsafe_code, missing_docs)]
 
 use std::ffi::CStr;
 use std::io;

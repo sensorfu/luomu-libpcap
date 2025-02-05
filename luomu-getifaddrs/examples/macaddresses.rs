@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 /// Prints Mac Addresses for all interfaces found
 fn main() -> std::io::Result<()> {
     for ifa in luomu_getifaddrs::getifaddrs()? {

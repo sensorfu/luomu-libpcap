@@ -16,3 +16,6 @@ libc.workspace = true
 cc.workspace = true
 liblzma.workspace = true
 tar.workspace = true
+
+[lints]
+workspace = true

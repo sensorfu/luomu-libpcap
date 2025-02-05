@@ -12,6 +12,8 @@
 //! Log level of "trace" (see <https://docs.rs/log/>) is used to log invocations
 //! of these functions.
 
+#![allow(unsafe_code)]
+
 use std::collections::BTreeSet;
 use std::ffi::{c_void, CStr, CString};
 use std::mem::MaybeUninit;

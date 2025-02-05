@@ -29,3 +29,6 @@ env_logger.workspace = true
 futures-util.workspace = true
 luomu-libpcap = { workspace = true, features = [ "async-tokio" ] }
 tokio = { workspace = true, features = [ "time" ] }
+
+[lints]
+workspace = true

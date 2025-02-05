@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 use std::net::IpAddr;
 
 use luomu_libpcap::{PcapFilter, PcapIfT, Result};
@@ -5,7 +7,7 @@ use luomu_libpcap::{PcapFilter, PcapIfT, Result};
 #[test]
 fn test_get_interfaces() -> Result<()> {
     let pcap_ifs = PcapIfT::new()?;
-    let _ = pcap_ifs.get_interfaces();
+    let _ifs = pcap_ifs.get_interfaces();
     Ok(())
 }
 

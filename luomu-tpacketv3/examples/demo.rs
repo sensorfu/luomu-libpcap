@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 #[cfg(target_os = "linux")]
 mod linux {
 
@@ -28,14 +30,14 @@ mod linux {
         debug!("Stopping, consumer received {} packets", pkt_count);
     }
 
-    fn print_stats(reader: &tpacketv3::Reader) {
+    fn print_stats(reader: &tpacketv3::Reader<'_>) {
         if let Ok((packets, dropped)) = reader.stats() {
             debug!("Tpacket packets: {}, dropped: {}", packets, dropped);
         }
     }
 
     fn packet_producer(
-        mut reader: tpacketv3::Reader,
+        mut reader: tpacketv3::Reader<'_>,
         ch: mpsc::Sender<Vec<u8>>,
         stop: Arc<AtomicBool>,
     ) {

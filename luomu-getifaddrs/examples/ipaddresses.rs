@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 use std::{collections::HashMap, net::IpAddr};
 
 /// Prints IP Addresses for all interfaces found

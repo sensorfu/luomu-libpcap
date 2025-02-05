@@ -1,11 +1,4 @@
-#![deny(
-    future_incompatible,
-    nonstandard_style,
-    rust_2018_compatibility,
-    rust_2018_idioms,
-    unused,
-    missing_docs
-)]
+#![allow(unsafe_code)]
 
 //! # luomu-libpcap
 //!
@@ -381,7 +374,7 @@ impl PcapDumper {
 impl Drop for PcapDumper {
     fn drop(&mut self) {
         log::trace!("PcapDumper::drop({:p})", self.pcap_dumper_t);
-        _ = pcap_dump_flush(self);
+        let _res = pcap_dump_flush(self);
         unsafe { luomu_libpcap_sys::pcap_dump_close(self.pcap_dumper_t) }
     }
 }
