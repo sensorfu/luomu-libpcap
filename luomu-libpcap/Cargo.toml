@@ -14,7 +14,6 @@ default = []
 async-tokio = [ "dep:futures-core", "dep:tokio" ]
 
 [dependencies]
-bytes.workspace = true
 libc.workspace = true
 log.workspace = true
 luomu-common.workspace = true
