@@ -1,24 +1,19 @@
 [package]
 name = "luomu-tpacketv3"
+description = "Rust bindings for packet capture using AF_PACKET and tpacketv3 on linux"
 version = "0.1.0"
-authors = ["Jukka Taimisto <jtaimisto@gmail.com>"]
+authors = [ "Jukka Taimisto <jtaimisto@gmail.com>" ]
 license.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-
-description = "Rust bindings for packet capture using AF_PACKET and tpacketv3 on linux"
-homepage = "https://github.com/sensorfu/luomu-libpcap#readme"
-repository = "https://github.com/sensorfu/luomu-libpcap"
-documentation = "https://docs.rs/luomu-libpcap/"
-readme = "README.md"
-keywords = [ "af_packet", "network" ]
-categories = [ "api-bindings", "network-programming" ]
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
-libc = { version = "0.2", default-features = false }
-log = { version = "0.4", default-features = false }
-luomu-libpcap = { path = "../luomu-libpcap/" }
+libc.workspace = true
+log.workspace = true
+luomu-libpcap.workspace = true
 
 [dev-dependencies]
-clap = { version = "4", features = [ "derive" ] }
-env_logger = {version = "0.11", default-features = false }
+clap.workspace = true
+env_logger.workspace = true

@@ -1,3 +1,10 @@
+[workspace.package]
+license = "MIT"
+edition = "2021"
+rust-version = "1.84.0" # MSRV
+homepage = "https://github.com/sensorfu/luomu-libpcap#readme"
+repository = "https://github.com/sensorfu/luomu-libpcap"
+
 [workspace]
 resolver = "2"
 members = [
@@ -8,7 +15,27 @@ members = [
 	"luomu-getifaddrs",
 ]
 
-[workspace.package]
-license = "MIT"
-edition = "2021"
-rust-version = "1.84.0" # MSRV
+[workspace.dependencies]
+# Our own crates
+luomu-common.path = "luomu-common/"
+luomu-libpcap.path = "luomu-libpcap/"
+luomu-libpcap-sys.path = "luomu-libpcap-sys/"
+luomu-tpacketv3.path = "luomu-tpacketv3/"
+luomu-getifaddrs.path = "luomu-getifaddrs/"
+
+# Third-party crates
+anyhow = "1"
+bitflags = "2"
+bytes = "1"
+cfg-if = "1"
+env_logger = { version = "0.11", default-features = false }
+futures-core = "0.3"
+futures-util = { version = "0.3", default-features = false }
+libc = { version = "0.2", features = ["extra_traits"] }
+log = { version = "0.4", default-features = false }
+quickcheck = { version = "1", default-features = false }
+tokio = { version = "1", features = [ "rt-multi-thread", "sync" ] }
+cc = "1"
+liblzma = { version = "0.3", features = ["static"] }
+tar = {version = "0.4", default-features = false }
+clap = { version = "4", features = [ "derive" ] }

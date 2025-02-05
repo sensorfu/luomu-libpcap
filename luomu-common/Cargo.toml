@@ -1,18 +1,13 @@
 [package]
 name = "luomu-common"
+description = "Common types and functions for network programming"
 version = "0.1.0"
 authors = [ "Ossi Herrala <oherrala@iki.fi>" ]
 license.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-
-description = "Common types and functions for network programming"
-homepage = "https://github.com/sensorfu/luomu-libpcap#readme"
-repository = "https://github.com/sensorfu/luomu-libpcap"
-documentation = "https://docs.rs/luomu-libpcap/"
-readme = "README.md"
-keywords = [ "network" ]
-categories = [ "network-programming" ]
+homepage.workspace = true
+repository.workspace = true
 
 [dev-dependencies]
-quickcheck = { version = "1", default-features = false }
+quickcheck.workspace = true

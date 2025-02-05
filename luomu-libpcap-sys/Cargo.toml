@@ -1,23 +1,18 @@
 [package]
 name = "luomu-libpcap-sys"
+description = "Rusty libpcap bindings - The FFI layer"
 version = "0.1.0"
 authors = [ "Ossi Herrala <oherrala@iki.fi>" ]
 license.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-
-description = "Rusty libpcap bindings - The FFI layer"
-homepage = "https://github.com/sensorfu/luomu-libpcap#readme"
-repository = "https://github.com/sensorfu/luomu-libpcap"
-documentation = "https://docs.rs/luomu-libpcap/"
-readme = "README.md"
-keywords = [ "pcap", "libpcap", "network" ]
-categories = [ "api-bindings", "external-ffi-bindings", "network-programming", "no-std" ]
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
-libc = { version = "0.2", features = [ "extra_traits" ] }
+libc.workspace = true
 
 [build-dependencies]
-cc = "1"
-liblzma = { version = "0.3", features = ["static"] }
-tar = {version = "0.4", default-features = false }
+cc.workspace = true
+liblzma.workspace = true
+tar.workspace = true
