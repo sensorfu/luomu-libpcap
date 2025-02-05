@@ -178,11 +178,11 @@ impl FromStr for MacAddr {
             .filter(|s| s.chars().all(|c| c.is_ascii_hexdigit()))
             .map(|v| u8::from_str_radix(v, 16).ok())
             .enumerate()
-            .try_fold(([0u8; 6], 0), |(mut addr, _), (i, v)| {
+            .try_fold((0, [0u8; 6]), |(_, mut addr), (i, v)| {
                 addr[i] = v?;
-                Some((addr, i))
+                Some((i, addr))
             })
-            .map_or(Err(InvalidAddress), |(val, i)| match i {
+            .map_or(Err(InvalidAddress), |(i, val)| match i {
                 5 => Ok(MacAddr::from(val)),
                 _ => Err(InvalidAddress),
             })
