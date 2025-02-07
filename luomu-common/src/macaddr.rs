@@ -42,7 +42,7 @@ impl MacAddr {
     /// A broadcast MAC address (FF:FF:FF:FF:FF:FF)
     pub const BROADCAST: MacAddr = MacAddr(MAC_BITS);
 
-    /// Return MAC address as bytearray in big endian order.
+    /// Return MAC address as byte array in big endian order.
     pub fn as_array(&self) -> [u8; 6] {
         // Taking range of [2,7] is safe from u64. See kani proof in bunnies
         // module.
@@ -404,5 +404,25 @@ mod tests {
 
             vlan == mac.pop_tag().unwrap()
         }
+    }
+}
+
+#[cfg(kani)]
+mod bunnies {
+    use crate::MacAddr;
+
+    #[kani::proof]
+    fn check_macaddr_try_from() {
+        let i: u64 = kani::any();
+        kani::assume(i <= 0x00FFFFFFFFFFFF);
+        assert!(MacAddr::try_from(i).is_ok());
+    }
+
+    #[kani::proof]
+    fn check_macaddr_as_array() {
+        let i: u64 = kani::any();
+        kani::assume(i <= 0x00FFFFFFFFFFFF);
+        let mac = MacAddr::try_from(i).unwrap();
+        mac.as_array();
     }
 }
