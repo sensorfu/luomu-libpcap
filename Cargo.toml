@@ -8,6 +8,7 @@ repository = "https://github.com/sensorfu/luomu-libpcap"
 [workspace]
 resolver = "2"
 members = [
+	# "fuzz",
 	"luomu-common",
 	"luomu-libpcap",
 	"luomu-libpcap-sys",
@@ -56,6 +57,9 @@ unused = { level = "deny", priority = -1 }
 # Lonely lints
 missing_docs = { level = "deny", priority = -1 }
 unsafe-code = "deny"
+
+# Allow cfg(kani)
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
 
 # Remove these after moving to Rust 2024 edition
 tail_expr_drop_order = "allow"

@@ -1,0 +1,19 @@
+[package]
+name = "luomu-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+luomu-common.path = "../luomu-common/"
+
+[[bin]]
+name = "macaddr-from-str"
+path = "fuzz_targets/macaddr-from-str.rs"
+test = false
+doc = false
+bench = false

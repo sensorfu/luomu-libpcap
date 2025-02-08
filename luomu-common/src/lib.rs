@@ -16,12 +16,15 @@ pub use directed_addr::{Destination, Source};
 mod addr_pair;
 pub use addr_pair::{AddrPair, IPPair, MacPair, PortPair};
 
+mod tagged_macaddr;
+pub use tagged_macaddr::TaggedMacAddr;
+
 /// Functions to check if IP addresses are valid for source, destination or
 /// forwardable
 pub mod ipaddr;
 
 /// Invalid address error
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct InvalidAddress;
 
 impl std::error::Error for InvalidAddress {}
@@ -31,3 +34,23 @@ impl fmt::Display for InvalidAddress {
         f.write_str("invalid address")
     }
 }
+
+/// Errors specific to VLAN IDs (tags)
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum TagError {
+    /// Tag stack is full and no additional tags can be added
+    TooManyTags,
+    /// The given tag is too large
+    TooLargeTag,
+}
+
+impl fmt::Display for TagError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TagError::TooLargeTag => f.write_str("the given tag is too large"),
+            TagError::TooManyTags => f.write_str("too many VLAN tags"),
+        }
+    }
+}
+
+impl std::error::Error for TagError {}
