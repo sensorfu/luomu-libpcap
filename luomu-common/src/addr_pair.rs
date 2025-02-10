@@ -155,6 +155,74 @@ impl IPPair {
     }
 }
 
+/// A pair of IPv4 addresses. Useful for IPv4 only protocols like ARP.
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+pub struct Ipv4Pair {
+    src: Source<Ipv4Addr>,
+    dst: Destination<Ipv4Addr>,
+}
+
+impl AddrPair<Ipv4Addr> for Ipv4Pair {
+    fn new(src: Source<Ipv4Addr>, dst: Destination<Ipv4Addr>) -> Self {
+        Self { src, dst }
+    }
+
+    fn source(&self) -> Source<Ipv4Addr> {
+        self.src
+    }
+
+    fn destination(&self) -> Destination<Ipv4Addr> {
+        self.dst
+    }
+
+    fn flip(&self) -> Self {
+        Self {
+            src: self.dst.flip(),
+            dst: self.src.flip(),
+        }
+    }
+}
+
+impl From<Ipv4Pair> for IPPair {
+    fn from(ip_pair: Ipv4Pair) -> Self {
+        IPPair::new_v4(ip_pair.source(), ip_pair.destination())
+    }
+}
+
+/// A pair of IPv6 addresses.
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+pub struct Ipv6Pair {
+    src: Source<Ipv6Addr>,
+    dst: Destination<Ipv6Addr>,
+}
+
+impl AddrPair<Ipv6Addr> for Ipv6Pair {
+    fn new(src: Source<Ipv6Addr>, dst: Destination<Ipv6Addr>) -> Self {
+        Self { src, dst }
+    }
+
+    fn source(&self) -> Source<Ipv6Addr> {
+        self.src
+    }
+
+    fn destination(&self) -> Destination<Ipv6Addr> {
+        self.dst
+    }
+
+    fn flip(&self) -> Self {
+        Self {
+            src: self.dst.flip(),
+            dst: self.src.flip(),
+        }
+    }
+}
+
+impl From<Ipv6Pair> for IPPair {
+    fn from(ip_pair: Ipv6Pair) -> Self {
+        IPPair::new_v6(ip_pair.source(), ip_pair.destination())
+    }
+}
+
 /// TCP and UDP use 16 bit port numbers and protocol implementations need to
 /// handle both source and destination port numbers together. This keeps both
 /// port numbers.
