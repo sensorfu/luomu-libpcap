@@ -52,7 +52,7 @@ impl TaggedMacAddr {
 
         #[allow(clippy::unusual_byte_groupings)] // groups of 12 bits
         if self.tag_stack & 0x0FFF_000_000_000_000 == 0 {
-            self.tag_stack = self.tag_stack << 12 | tag as TagStack;
+            self.tag_stack = (self.tag_stack << 12) | tag as TagStack;
             return Ok(());
         }
 

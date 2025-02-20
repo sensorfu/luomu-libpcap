@@ -60,7 +60,7 @@ impl FanoutMode {
             FanoutMode::CPU(v) => v,
         };
 
-        *group_id as i32 | self.val() << 16
+        *group_id as i32 | (self.val() << 16)
     }
 }
 
