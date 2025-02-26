@@ -166,6 +166,37 @@ pub const fn is_valid_forwardable_ip6(ip: Ipv6Addr) -> bool {
     is_valid_destination_ip6(ip) && !ip.is_unicast_link_local()
 }
 
+/// Returns the computed Solicited-Node Multicast address for `ip`.
+///
+/// See RFC 4291 section 2.7.1
+pub fn solicited_node_multicast_address_for(ip: Ipv6Addr) -> Ipv6Addr {
+    debug_assert!(!ip.is_multicast(), "ip is multicast address");
+
+    // RFC 4291 sect 2.7.1:
+    //  A Solicited-Node multicast address is formed by taking the
+    //  low-order 24 bits of an address (unicast or anycast) and
+    //  appending those bits to the prefix FF02:0:0:0:0:1:FF00::/104
+
+    Ipv6Addr::from([
+        0xff02,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0001,
+        0xff00 | (0x00FF & ip.segments()[6]),
+        ip.segments()[7],
+    ])
+}
+
+/// Returns true if `ip` is Solicited-Node multicast address.
+///
+/// See RFC 4291 section 2.7.1
+pub const fn is_solicited_node_multicast_address(ip: Ipv6Addr) -> bool {
+    matches!(ip.segments(), [0xff02, 0x0, 0x0, 0x0, 0x0, 0x0001, _, _])
+        && (ip.segments()[6] & 0xff00) == 0xff00
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -436,5 +467,17 @@ mod tests {
         for ip in ips {
             assert!(is_valid_forwardable_ip(ip), "invalid valid ip {ip}");
         }
+    }
+
+    #[test]
+    fn test_solicited_node_multicast_addr() {
+        let ip = "4047::01:800:200e:8c6c"
+            .parse()
+            .expect("invalid IPv6 address");
+        let expected: Ipv6Addr = "ff02::1:ff0e:8c6c".parse().expect("invalid IPv6 address");
+        let solicited = solicited_node_multicast_address_for(ip);
+        assert!(is_solicited_node_multicast_address(solicited));
+        assert!(!is_solicited_node_multicast_address(ip));
+        assert_eq!(solicited, expected);
     }
 }
