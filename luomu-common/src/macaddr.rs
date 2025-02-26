@@ -1,5 +1,6 @@
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::str::FromStr;
 
 use crate::{InvalidAddress, TagError};
@@ -9,6 +10,15 @@ const MAC_BITS: u64 = 0x0000FFFFFFFFFFFF;
 
 // The VLAN tag portion of u64
 const TAG_BITS: u64 = 0x0FFF000000000000;
+
+///  Address bytes for Ethernet multicast MAC for All Nodes IPv6 multicast.
+const ALL_NODES_MAC: [u8; 6] = [0x33, 0x33, 0x00, 0x00, 0x00, 0x01];
+/// Base address to use when creating mac addresses for IPv6 multicast
+/// addresses. See RFC2464 sect 7.
+const IPV6_MULTICAST_BASE_MAC: [u8; 6] = [0x33, 0x33, 0x0, 0x0, 0x0, 0x0];
+/// Base address to use when creating mac addresses for IPv4 multicast
+/// addresses. Ses RFC1112 sect6.4
+const IPV4_MULTICAST_BASE_MAC: [u8; 6] = [0x01, 0x00, 0x5E, 0x0, 0x0, 0x0];
 
 /// A Mac address used for example with Ethernet.
 ///
@@ -103,6 +113,64 @@ impl MacAddr {
         match (self.0 >> 48) & 0x0FFF {
             n if n > 0 => Some(n as u16),
             _ => None,
+        }
+    }
+
+    /// Creates corresponding [MacAddr] for multicast address `addr`.
+    ///
+    /// If `addr` is a multicast address, the MAC address is created for it
+    /// according to relevant specification. For non-multicast addresses
+    /// broadcast Mac is returned.
+    pub fn multicast_mac_for_ip4(addr: Ipv4Addr) -> Self {
+        if !addr.is_multicast() {
+            return MacAddr::BROADCAST;
+        }
+
+        // RFC 1112 sect 6.4:
+        // An IP host group address is mapped to an Ethernet multicast address
+        // by placing the low-order 23-bits of the IP address into the low-order
+        // 23 bits of the Ethernet multicast address 01-00-5E-00-00-00 (hex).
+        let mut mac = IPV4_MULTICAST_BASE_MAC;
+        let addr_bytes = addr.octets();
+        mac[3] = 0xef & addr_bytes[1];
+        mac[4] = addr_bytes[2];
+        mac[5] = addr_bytes[3];
+        MacAddr::from(mac)
+    }
+
+    /// Creates corresponding [MacAddr] for multicast address `addr`.
+    ///
+    /// If `addr` is a multicast address, the MAC address is created for it
+    /// according to relevant specification. For non-multicast addresses
+    /// all-nodes multicast address is returned.
+    pub fn multicast_mac_for_ip6(addr: Ipv6Addr) -> Self {
+        if !addr.is_multicast() {
+            return MacAddr::from(ALL_NODES_MAC);
+        }
+
+        // RFC 2464 sect 7:
+        // An IPv6 packet with a multicast destination address DST, consisting
+        // of the sixteen octets DST[1] through DST[16], is transmitted to the
+        // Ethernet multicast address whose first two octets are the value 3333
+        // hexadecimal and whose last four octets are the last four octets of
+        // DST.
+        let mut mac = IPV6_MULTICAST_BASE_MAC;
+        mac[2] = addr.octets()[12];
+        mac[3] = addr.octets()[13];
+        mac[4] = addr.octets()[14];
+        mac[5] = addr.octets()[15];
+        MacAddr::from(mac)
+    }
+
+    /// Creates corresponding [MacAddr] for multicast address `addr`.
+    ///
+    /// If `addr` is a multicast address, the MAC address is created for it
+    /// according to relevant specification. For non-multicast addresses either
+    /// broadcast Mac (IPv4) or all-nodes multicast address (IPv6) is returned.
+    pub fn multicast_mac_for(addr: IpAddr) -> Self {
+        match addr {
+            IpAddr::V4(a) => Self::multicast_mac_for_ip4(a),
+            IpAddr::V6(a) => Self::multicast_mac_for_ip6(a),
         }
     }
 }
@@ -221,9 +289,14 @@ impl fmt::Debug for MacAddr {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::{TryFrom, TryInto};
+    use std::{
+        convert::{TryFrom, TryInto},
+        net::{Ipv4Addr, Ipv6Addr},
+    };
 
     use quickcheck::quickcheck;
+
+    use crate::macaddr::ALL_NODES_MAC;
 
     use super::{MacAddr, TagError};
 
@@ -377,6 +450,47 @@ mod tests {
         assert_eq!(addr1.pop_tag(), None);
 
         assert_eq!(addr1.push_tag(0x0FFF + 1), Err(TagError::TooLargeTag));
+    }
+
+    #[test]
+    fn test_create_multicast_mac_for6() {
+        let mut addr: Ipv6Addr = "ff02::1".parse().unwrap();
+        let mut mac = MacAddr::multicast_mac_for_ip6(addr);
+        assert_eq!(mac, MacAddr::from(&[0x33, 0x033, 0x00, 0x00, 0x00, 0x01]));
+        assert_eq!(mac, MacAddr::multicast_mac_for(addr.into()));
+
+        addr = "ff02::aabb:ccdd:eeff".parse().unwrap();
+        mac = MacAddr::multicast_mac_for_ip6(addr);
+        assert_eq!(mac, MacAddr::from(&[0x33, 0x33, 0xcc, 0xdd, 0xee, 0xff]));
+        assert_eq!(mac, MacAddr::multicast_mac_for(addr.into()));
+    }
+
+    #[test]
+    fn test_create_multicast_mac_for4() {
+        let mut addr: Ipv4Addr = "224.0.0.251".parse().unwrap();
+        let mut mac = MacAddr::multicast_mac_for_ip4(addr);
+        assert_eq!(mac, MacAddr::from(&[0x01, 0x00, 0x5e, 0x00, 0x00, 0xfb]));
+        assert_eq!(mac, MacAddr::multicast_mac_for(addr.into()));
+
+        addr = "224.255.127.127".parse().unwrap();
+        mac = MacAddr::multicast_mac_for_ip4(addr);
+        assert_eq!(mac, MacAddr::from(&[0x01, 0x00, 0x5e, 0xef, 0x7f, 0x7f]));
+        assert_eq!(mac, MacAddr::multicast_mac_for(addr.into()));
+    }
+
+    #[test]
+    fn test_create_multicast_mac_for4_unicast() {
+        let addr = "192.0.2.1".parse().unwrap();
+        let mac = MacAddr::multicast_mac_for_ip4(addr);
+        assert_eq!(mac, MacAddr::BROADCAST);
+        assert_eq!(mac, MacAddr::multicast_mac_for(addr.into()));
+    }
+    #[test]
+    fn test_create_multicast_mac_for6_unicast() {
+        let addr = "2001:db8::1".parse().unwrap();
+        let mac = MacAddr::multicast_mac_for_ip6(addr);
+        assert_eq!(mac, MacAddr::from(ALL_NODES_MAC));
+        assert_eq!(mac, MacAddr::multicast_mac_for(addr.into()));
     }
 
     quickcheck! {
