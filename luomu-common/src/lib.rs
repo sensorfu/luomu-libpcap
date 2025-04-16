@@ -14,7 +14,7 @@ mod directed_addr;
 pub use directed_addr::{Destination, Source};
 
 mod addr_pair;
-pub use addr_pair::{AddrPair, IPPair, Ipv4Pair, Ipv6Pair, MacPair, PortPair};
+pub use addr_pair::{AddrPair, IPPair, Ipv4Pair, Ipv6Pair, MacPair, PortPair, TaggedMacPair};
 
 mod tagged_macaddr;
 pub use tagged_macaddr::TaggedMacAddr;

@@ -1,6 +1,6 @@
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
-use crate::MacAddr;
+use crate::{MacAddr, TaggedMacAddr};
 
 use super::{Destination, Source};
 
@@ -305,6 +305,52 @@ impl AddrPair<MacAddr> for MacPair {
 
     /// Return the destionation Mac.
     fn destination(&self) -> Destination<MacAddr> {
+        self.dst
+    }
+
+    /// Flip source and destination MAC addresses.
+    fn flip(&self) -> Self {
+        Self {
+            src: self.dst.flip(),
+            dst: self.src.flip(),
+        }
+    }
+}
+
+/// A pair of tagged MAC addresses.
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+pub struct TaggedMacPair {
+    src: Source<TaggedMacAddr>,
+    dst: Destination<TaggedMacAddr>,
+}
+
+impl From<(Source<TaggedMacAddr>, Destination<TaggedMacAddr>)> for TaggedMacPair {
+    fn from(value: (Source<TaggedMacAddr>, Destination<TaggedMacAddr>)) -> Self {
+        let (src, dst) = value;
+        TaggedMacPair::new(src, dst)
+    }
+}
+
+impl From<(Destination<TaggedMacAddr>, Source<TaggedMacAddr>)> for TaggedMacPair {
+    fn from(value: (Destination<TaggedMacAddr>, Source<TaggedMacAddr>)) -> Self {
+        let (dst, src) = value;
+        TaggedMacPair::new(src, dst)
+    }
+}
+
+impl AddrPair<TaggedMacAddr> for TaggedMacPair {
+    /// Construct new `TaggedMacPair` with `Source` and `Destination` MAC addresses.
+    fn new(src: Source<TaggedMacAddr>, dst: Destination<TaggedMacAddr>) -> Self {
+        Self { src, dst }
+    }
+
+    /// Return the source Mac.
+    fn source(&self) -> Source<TaggedMacAddr> {
+        self.src
+    }
+
+    /// Return the destionation Mac.
+    fn destination(&self) -> Destination<TaggedMacAddr> {
         self.dst
     }
 
