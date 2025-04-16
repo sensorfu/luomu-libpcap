@@ -21,7 +21,7 @@ type TagStack = u64;
 /// assert_eq!(mac.pop_tag(), Some(42));
 /// assert_eq!(mac.pop_tag(), None);
 /// ```
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TaggedMacAddr {
     mac: MacAddr,
     tag_stack: TagStack,
