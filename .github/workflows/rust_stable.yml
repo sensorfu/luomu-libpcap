@@ -12,12 +12,9 @@ jobs:
     steps:
       - name: Install dependencies
         run: sudo apt -y update && sudo apt -y install flex bison
-
-      - name: Install Rust
-        run: rustup toolchain install stable --profile minimal --component clippy rustfmt
-
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
-
+      - uses: sensorfu/setup-rust-action@v1
+        with:
+          components: clippy,rustfmt
       - run: cargo clippy -- -D warnings
       - run: cargo fmt --all -- --check
