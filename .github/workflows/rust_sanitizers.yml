@@ -18,20 +18,13 @@ jobs:
       - name: Install dependencies
         run: sudo apt -y update && sudo apt -y install flex bison
         if: ${{ startsWith(matrix.os, 'ubuntu') }}
-
-      - name: Install Rust nightly
-        run: |
-          rustup toolchain install nightly --profile minimal --component rust-src
-          rustup override set nightly
-
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
+      - uses: sensorfu/setup-rust-action@v1
         with:
-          key: ${{ matrix.os }}-${{ matrix.sanitizer }}-sanitizer
-
+          toolchain: nightly
+          components: rust-src
       - run: |
           echo "TARGET=$(rustc -vV | awk '/^host: / { print $2 }')" >>${GITHUB_ENV}
-
       - name: Run ${{ matrix.sanitizer }} sanitizer for ${{ env.TARGET }}
         env:
           RUSTFLAGS: -Z sanitizer=${{ matrix.sanitizer }}
