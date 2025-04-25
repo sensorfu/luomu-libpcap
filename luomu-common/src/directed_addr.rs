@@ -13,7 +13,7 @@ impl<ADDR> Source<ADDR> {
 
     /// Make a [Destination] out from `Source`.
     pub fn flip(self) -> Destination<ADDR> {
-        Destination(self.unwrap())
+        Destination(self.into_inner())
     }
 
     /// Return new [Source] where function f has been applied to ADDR.
@@ -76,13 +76,13 @@ impl<ADDR> AsMut<ADDR> for Source<ADDR> {
 
 impl From<Source<Ipv4Addr>> for Source<IpAddr> {
     fn from(addr: Source<Ipv4Addr>) -> Self {
-        Source::new(IpAddr::V4(addr.unwrap()))
+        Source::new(IpAddr::V4(addr.into_inner()))
     }
 }
 
 impl From<Source<Ipv6Addr>> for Source<IpAddr> {
     fn from(addr: Source<Ipv6Addr>) -> Self {
-        Source::new(IpAddr::V6(addr.unwrap()))
+        Source::new(IpAddr::V6(addr.into_inner()))
     }
 }
 
@@ -98,7 +98,7 @@ impl<ADDR> Destination<ADDR> {
 
     /// Make a [Source] out from `Destination`.
     pub fn flip(self) -> Source<ADDR> {
-        Source(self.unwrap())
+        Source(self.into_inner())
     }
 
     /// Return new [Destination] where function f has been applied to ADDR.
@@ -161,13 +161,13 @@ impl<ADDR> AsMut<ADDR> for Destination<ADDR> {
 
 impl From<Destination<Ipv4Addr>> for Destination<IpAddr> {
     fn from(addr: Destination<Ipv4Addr>) -> Self {
-        Destination::new(IpAddr::V4(addr.unwrap()))
+        Destination::new(IpAddr::V4(addr.into_inner()))
     }
 }
 
 impl From<Destination<Ipv6Addr>> for Destination<IpAddr> {
     fn from(addr: Destination<Ipv6Addr>) -> Self {
-        Destination::new(IpAddr::V6(addr.unwrap()))
+        Destination::new(IpAddr::V6(addr.into_inner()))
     }
 }
 
@@ -183,7 +183,7 @@ mod tests {
         let i2 = i1.flip();
         let i3 = i2.flip();
 
-        assert_eq!(i2.unwrap(), 42);
+        assert_eq!(i2.into_inner(), 42);
         assert_eq!(i1, i3);
     }
 
@@ -194,15 +194,15 @@ mod tests {
         let ip3 = Destination::new(Ipv6Addr::UNSPECIFIED);
         let ip4 = Source::new(Ipv6Addr::UNSPECIFIED);
 
-        let ip5 = Destination::new(IpAddr::from(ip1.unwrap()));
-        let ip6 = Source::new(IpAddr::from(ip2.unwrap()));
-        let ip7 = Destination::new(IpAddr::from(ip3.unwrap()));
-        let ip8 = Source::new(IpAddr::from(ip4.unwrap()));
+        let ip5 = Destination::new(IpAddr::from(ip1.into_inner()));
+        let ip6 = Source::new(IpAddr::from(ip2.into_inner()));
+        let ip7 = Destination::new(IpAddr::from(ip3.into_inner()));
+        let ip8 = Source::new(IpAddr::from(ip4.into_inner()));
 
-        assert_eq!(ip5.unwrap(), Ipv4Addr::UNSPECIFIED);
-        assert_eq!(ip6.unwrap(), Ipv4Addr::UNSPECIFIED);
-        assert_eq!(ip7.unwrap(), Ipv6Addr::UNSPECIFIED);
-        assert_eq!(ip8.unwrap(), Ipv6Addr::UNSPECIFIED);
+        assert_eq!(ip5.into_inner(), Ipv4Addr::UNSPECIFIED);
+        assert_eq!(ip6.into_inner(), Ipv4Addr::UNSPECIFIED);
+        assert_eq!(ip7.into_inner(), Ipv6Addr::UNSPECIFIED);
+        assert_eq!(ip8.into_inner(), Ipv6Addr::UNSPECIFIED);
     }
 
     #[test]
@@ -212,25 +212,25 @@ mod tests {
         let sa3 = Destination::new(SocketAddrV6::new(Ipv6Addr::UNSPECIFIED, 42, 0, 0));
         let sa4 = Source::new(SocketAddrV6::new(Ipv6Addr::UNSPECIFIED, 42, 0, 0));
 
-        let sa5 = Destination::new(SocketAddr::from(sa1.unwrap()));
-        let sa6 = Source::new(SocketAddr::from(sa2.unwrap()));
-        let sa7 = Destination::new(SocketAddr::from(sa3.unwrap()));
-        let sa8 = Source::new(SocketAddr::from(sa4.unwrap()));
+        let sa5 = Destination::new(SocketAddr::from(sa1.into_inner()));
+        let sa6 = Source::new(SocketAddr::from(sa2.into_inner()));
+        let sa7 = Destination::new(SocketAddr::from(sa3.into_inner()));
+        let sa8 = Source::new(SocketAddr::from(sa4.into_inner()));
 
         assert_eq!(
-            (sa5.unwrap().ip(), sa5.unwrap().port()),
+            (sa5.into_inner().ip(), sa5.into_inner().port()),
             (Ipv4Addr::UNSPECIFIED.into(), 42)
         );
         assert_eq!(
-            (sa6.unwrap().ip(), sa6.unwrap().port()),
+            (sa6.into_inner().ip(), sa6.into_inner().port()),
             (Ipv4Addr::UNSPECIFIED.into(), 42)
         );
         assert_eq!(
-            (sa7.unwrap().ip(), sa7.unwrap().port()),
+            (sa7.into_inner().ip(), sa7.into_inner().port()),
             (Ipv6Addr::UNSPECIFIED.into(), 42)
         );
         assert_eq!(
-            (sa8.unwrap().ip(), sa8.unwrap().port()),
+            (sa8.into_inner().ip(), sa8.into_inner().port()),
             (Ipv6Addr::UNSPECIFIED.into(), 42)
         );
     }
@@ -258,11 +258,11 @@ mod tests {
     fn test_map() {
         let src_port: Source<u16> = Source::new(12765);
         let new_port = src_port.map(|p| p.wrapping_add(1));
-        assert_eq!(new_port.unwrap(), src_port.unwrap() + 1);
+        assert_eq!(new_port.into_inner(), src_port.into_inner() + 1);
 
         let dst_port: Destination<u16> = Destination::new(12765);
         let new_port = dst_port.map(|p| p.wrapping_add(2));
-        assert_eq!(new_port.unwrap(), src_port.unwrap() + 2);
+        assert_eq!(new_port.into_inner(), src_port.into_inner() + 2);
 
         let src_ip: Source<Ipv4Addr> = Source::new(Ipv4Addr::UNSPECIFIED);
         assert_eq!(

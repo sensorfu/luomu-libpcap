@@ -55,7 +55,7 @@ impl AddrPair<IpAddr> for IPPair {
     /// [IPPair::new_checked], [IPPair::new_v4] or [IPPair::new_v6] instead for
     /// safe versions.
     fn new(src: Source<IpAddr>, dst: Destination<IpAddr>) -> IPPair {
-        match (src.unwrap(), dst.unwrap()) {
+        match (src.into_inner(), dst.into_inner()) {
             (IpAddr::V4(src), IpAddr::V4(dst)) => {
                 IPPair::new_v4(Source::new(src), Destination::new(dst))
             }
@@ -72,16 +72,16 @@ impl AddrPair<IpAddr> for IPPair {
     /// Returns the source IP address from pair.
     fn source(&self) -> Source<IpAddr> {
         match self {
-            IPPair::V4 { src, .. } => Source::new(IpAddr::from(src.unwrap())),
-            IPPair::V6 { src, .. } => Source::new(IpAddr::from(src.unwrap())),
+            IPPair::V4 { src, .. } => Source::new(IpAddr::from(src.into_inner())),
+            IPPair::V6 { src, .. } => Source::new(IpAddr::from(src.into_inner())),
         }
     }
 
     /// Returns the destination IP address from pair.
     fn destination(&self) -> Destination<IpAddr> {
         match self {
-            IPPair::V4 { dst, .. } => Destination::new(IpAddr::from(dst.unwrap())),
-            IPPair::V6 { dst, .. } => Destination::new(IpAddr::from(dst.unwrap())),
+            IPPair::V4 { dst, .. } => Destination::new(IpAddr::from(dst.into_inner())),
+            IPPair::V6 { dst, .. } => Destination::new(IpAddr::from(dst.into_inner())),
         }
     }
 
@@ -124,7 +124,7 @@ impl IPPair {
     /// Creates [IPPair] for given source and destination addresses.
     /// None is returned if addresses are of different address families.
     pub fn new_checked(src: Source<IpAddr>, dst: Destination<IpAddr>) -> Option<IPPair> {
-        match (src.unwrap(), dst.unwrap()) {
+        match (src.into_inner(), dst.into_inner()) {
             (IpAddr::V4(s), IpAddr::V4(d)) => {
                 Some(IPPair::new_v4(Source::new(s), Destination::new(d)))
             }
@@ -376,8 +376,8 @@ mod tests {
 
         let ippair1 = IPPair::new_checked(Source::new(ip1), Destination::new(ip2)).unwrap();
         let ippair2 = ippair1.flip();
-        assert_eq!(ippair2.source().unwrap(), ip2);
-        assert_eq!(ippair2.destination().unwrap(), ip1);
+        assert_eq!(ippair2.source().into_inner(), ip2);
+        assert_eq!(ippair2.destination().into_inner(), ip1);
     }
 
     #[test]
@@ -387,8 +387,8 @@ mod tests {
 
         let ippair1 = IPPair::new_checked(Source::new(ip1), Destination::new(ip2)).unwrap();
         let ippair2 = ippair1.flip();
-        assert_eq!(ippair2.source().unwrap(), ip2);
-        assert_eq!(ippair2.destination().unwrap(), ip1);
+        assert_eq!(ippair2.source().into_inner(), ip2);
+        assert_eq!(ippair2.destination().into_inner(), ip1);
     }
 
     #[test]
@@ -423,8 +423,8 @@ mod tests {
 
         let ippair1 = IPPair::new_v4(Source::new(ip1), Destination::new(ip2));
         let ippair2 = ippair1.flip();
-        assert_eq!(ippair2.source().unwrap(), ip2);
-        assert_eq!(ippair2.destination().unwrap(), ip1);
+        assert_eq!(ippair2.source().into_inner(), ip2);
+        assert_eq!(ippair2.destination().into_inner(), ip1);
     }
 
     #[test]
@@ -434,8 +434,8 @@ mod tests {
 
         let ippair1 = IPPair::new_v6(Source::new(ip1), Destination::new(ip2));
         let ippair2 = ippair1.flip();
-        assert_eq!(ippair2.source().unwrap(), ip2);
-        assert_eq!(ippair2.destination().unwrap(), ip1);
+        assert_eq!(ippair2.source().into_inner(), ip2);
+        assert_eq!(ippair2.destination().into_inner(), ip1);
     }
 
     #[test]
@@ -452,7 +452,7 @@ mod tests {
         let (p1, p2) = (42, 12765);
         let port_pair = PortPair::new(Source::new(p1), Destination::new(p2));
         let flipped = port_pair.flip();
-        assert_eq!(p1, flipped.destination().unwrap());
-        assert_eq!(p2, flipped.source().unwrap());
+        assert_eq!(p1, flipped.destination().into_inner());
+        assert_eq!(p2, flipped.source().into_inner());
     }
 }
