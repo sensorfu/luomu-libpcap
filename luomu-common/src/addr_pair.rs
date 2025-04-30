@@ -1,6 +1,6 @@
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
-use crate::{MacAddr, TaggedMacAddr};
+use crate::{tagged_macaddr::TagStack, MacAddr, TagError};
 
 use super::{Destination, Source};
 
@@ -317,40 +317,68 @@ impl AddrPair<MacAddr> for MacPair {
     }
 }
 
-/// A pair of tagged MAC addresses.
+/// A pair of MAC addresses with support for storing a stack of VLAN IDs.
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub struct TaggedMacPair {
-    src: Source<TaggedMacAddr>,
-    dst: Destination<TaggedMacAddr>,
+    src: Source<MacAddr>,
+    dst: Destination<MacAddr>,
+    tag_stack: TagStack,
 }
 
-impl From<(Source<TaggedMacAddr>, Destination<TaggedMacAddr>)> for TaggedMacPair {
-    fn from(value: (Source<TaggedMacAddr>, Destination<TaggedMacAddr>)) -> Self {
+impl TaggedMacPair {
+    /// Push a VLAN tag into the stack. The outermost tag should be pushed
+    /// first.
+    pub const fn push_tag(&mut self, tag: u16) -> Result<(), TagError> {
+        self.tag_stack.push_tag(tag)
+    }
+
+    /// Pop a VLAN tag from the stack. The innermost tag pops out first.
+    pub const fn pop_tag(&mut self) -> Option<u16> {
+        self.tag_stack.pop_tag()
+    }
+
+    /// Peek a next tag in stack, but don't pop it out.
+    pub const fn peek_tag(&self) -> Option<u16> {
+        self.tag_stack.peek_tag()
+    }
+
+    /// Get all tags as an array.
+    pub fn tag_array(&self) -> [u16; 5] {
+        self.tag_stack.tag_array()
+    }
+}
+
+impl From<(Source<MacAddr>, Destination<MacAddr>)> for TaggedMacPair {
+    fn from(value: (Source<MacAddr>, Destination<MacAddr>)) -> Self {
         let (src, dst) = value;
         TaggedMacPair::new(src, dst)
     }
 }
 
-impl From<(Destination<TaggedMacAddr>, Source<TaggedMacAddr>)> for TaggedMacPair {
-    fn from(value: (Destination<TaggedMacAddr>, Source<TaggedMacAddr>)) -> Self {
+impl From<(Destination<MacAddr>, Source<MacAddr>)> for TaggedMacPair {
+    fn from(value: (Destination<MacAddr>, Source<MacAddr>)) -> Self {
         let (dst, src) = value;
         TaggedMacPair::new(src, dst)
     }
 }
 
-impl AddrPair<TaggedMacAddr> for TaggedMacPair {
+impl AddrPair<MacAddr> for TaggedMacPair {
     /// Construct new `TaggedMacPair` with `Source` and `Destination` MAC addresses.
-    fn new(src: Source<TaggedMacAddr>, dst: Destination<TaggedMacAddr>) -> Self {
-        Self { src, dst }
+    fn new(src: Source<MacAddr>, dst: Destination<MacAddr>) -> Self {
+        Self {
+            src,
+            dst,
+            tag_stack: TagStack::new(),
+        }
     }
 
     /// Return the source Mac.
-    fn source(&self) -> Source<TaggedMacAddr> {
+    fn source(&self) -> Source<MacAddr> {
         self.src
     }
 
     /// Return the destionation Mac.
-    fn destination(&self) -> Destination<TaggedMacAddr> {
+    fn destination(&self) -> Destination<MacAddr> {
         self.dst
     }
 
@@ -359,6 +387,7 @@ impl AddrPair<TaggedMacAddr> for TaggedMacPair {
         Self {
             src: self.dst.flip(),
             dst: self.src.flip(),
+            tag_stack: self.tag_stack,
         }
     }
 }
