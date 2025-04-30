@@ -1,13 +1,76 @@
 use crate::{MacAddr, TagError};
 
-// Size of our tag stack. 64bit integer can store up to five VLAN tags.
-type TagStack = u64;
+/// Size of our tag stack. 64bit integer can store up to five VLAN tags.
+type TagStackSize = u64;
 
-/// A [MacAddr] with additional support for storing stack of VLAN IDs.
+/// A stack of up to five VLAN tags.
 ///
 /// Tags are stored as a stack where the outermost tag should be pushed first
-/// and popped last (aka LIFO). There's enough room to store up to five VLAN
-/// IDs.
+/// and popped last (aka LIFO).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TagStack(TagStackSize);
+
+impl Default for TagStack {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl TagStack {
+    /// Construct new [TagStack].
+    pub const fn new() -> Self {
+        Self(0)
+    }
+
+    /// Push a VLAN tag into the stack. The outermost tag should be pushed
+    /// first.
+    pub const fn push_tag(&mut self, tag: u16) -> Result<(), TagError> {
+        if tag > 0x0FFF {
+            return Err(TagError::TooLargeTag);
+        }
+
+        #[allow(clippy::unusual_byte_groupings)] // groups of 12 bits
+        if self.0 & 0x0FFF_000_000_000_000 == 0 {
+            self.0 = (self.0 << 12) | tag as TagStackSize;
+            return Ok(());
+        }
+
+        Err(TagError::TooManyTags)
+    }
+
+    /// Pop a VLAN tag from the stack. The innermost tag pops out first.
+    pub const fn pop_tag(&mut self) -> Option<u16> {
+        let Some(tag) = self.peek_tag() else {
+            return None;
+        };
+        self.0 >>= 12;
+        Some(tag)
+    }
+
+    /// Peek a next tag in stack, but don't pop it out.
+    pub const fn peek_tag(&self) -> Option<u16> {
+        let tag = self.0 & 0x0000000000000FFF;
+        if tag > 0 {
+            return Some(tag as u16);
+        }
+
+        None
+    }
+
+    /// Get all tags as an array.
+    #[allow(clippy::unusual_byte_groupings)]
+    pub fn tag_array(&self) -> [u16; 5] {
+        let mut tags = [0u16; 5];
+        tags[0] = ((self.0 & 0x0FFF_000_000_000_000) >> 48) as u16;
+        tags[1] = ((self.0 & 0x0000_FFF_000_000_000) >> 36) as u16;
+        tags[2] = ((self.0 & 0x0000_000_FFF_000_000) >> 24) as u16;
+        tags[3] = ((self.0 & 0x0000_000_000_FFF_000) >> 12) as u16;
+        tags[4] = (self.0 & 0x0000_000_000_000_FFF) as u16;
+        tags
+    }
+}
+
+/// A [MacAddr] with additional support for storing a stack of VLAN IDs.
 ///
 /// ```rust
 /// use luomu_common::{MacAddr, TaggedMacAddr};
@@ -30,7 +93,10 @@ pub struct TaggedMacAddr {
 impl TaggedMacAddr {
     /// Construct new [TaggedMacAddr].
     pub const fn new(mac: MacAddr) -> Self {
-        Self { mac, tag_stack: 0 }
+        Self {
+            mac,
+            tag_stack: TagStack::new(),
+        }
     }
 
     /// Get a reference to a [MacAddr].
@@ -46,48 +112,22 @@ impl TaggedMacAddr {
     /// Push a VLAN tag into the stack. The outermost tag should be pushed
     /// first.
     pub const fn push_tag(&mut self, tag: u16) -> Result<(), TagError> {
-        if tag > 0x0FFF {
-            return Err(TagError::TooLargeTag);
-        }
-
-        #[allow(clippy::unusual_byte_groupings)] // groups of 12 bits
-        if self.tag_stack & 0x0FFF_000_000_000_000 == 0 {
-            self.tag_stack = (self.tag_stack << 12) | tag as TagStack;
-            return Ok(());
-        }
-
-        Err(TagError::TooManyTags)
+        self.tag_stack.push_tag(tag)
     }
 
     /// Pop a VLAN tag from the stack. The innermost tag pops out first.
     pub const fn pop_tag(&mut self) -> Option<u16> {
-        let Some(tag) = self.peek_tag() else {
-            return None;
-        };
-        self.tag_stack >>= 12;
-        Some(tag)
+        self.tag_stack.pop_tag()
     }
 
     /// Peek a next tag in stack, but don't pop it out.
     pub const fn peek_tag(&self) -> Option<u16> {
-        let tag = self.tag_stack & 0x0000000000000FFF;
-        if tag > 0 {
-            return Some(tag as u16);
-        }
-
-        None
+        self.tag_stack.peek_tag()
     }
 
     /// Get all tags as an array.
-    #[allow(clippy::unusual_byte_groupings)]
     pub fn tag_array(&self) -> [u16; 5] {
-        let mut tags = [0u16; 5];
-        tags[0] = ((self.tag_stack & 0x0FFF_000_000_000_000) >> 48) as u16;
-        tags[1] = ((self.tag_stack & 0x0000_FFF_000_000_000) >> 36) as u16;
-        tags[2] = ((self.tag_stack & 0x0000_000_FFF_000_000) >> 24) as u16;
-        tags[3] = ((self.tag_stack & 0x0000_000_000_FFF_000) >> 12) as u16;
-        tags[4] = (self.tag_stack & 0x0000_000_000_000_FFF) as u16;
-        tags
+        self.tag_stack.tag_array()
     }
 }
 
