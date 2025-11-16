@@ -24,13 +24,7 @@ impl<ADDR> Source<ADDR> {
         Source(f(self.0))
     }
 
-    /// Returns the underlying value inside `Source`.
-    #[deprecated(note = "unwrap() will be removed, use into_inner() instead")]
-    pub fn unwrap(self) -> ADDR {
-        self.0
-    }
-
-    /// Returns the underlying value inside this `Source`
+    /// Returns the underlying value inside this `Source`.
     pub fn into_inner(self) -> ADDR {
         self.0
     }
@@ -97,13 +91,7 @@ impl<ADDR> Destination<ADDR> {
         Destination(f(self.0))
     }
 
-    /// Returns the underlying value inside `Destination`.
-    #[deprecated(note = "unwrap() will be removed, use into_inner() instead")]
-    pub fn unwrap(self) -> ADDR {
-        self.0
-    }
-
-    /// Returns the underlying value inside this `Destination`
+    /// Returns the underlying value inside this `Destination`.
     pub fn into_inner(self) -> ADDR {
         self.0
     }
