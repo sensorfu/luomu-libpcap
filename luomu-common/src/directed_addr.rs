@@ -36,18 +36,6 @@ impl<ADDR> Source<ADDR> {
     }
 }
 
-impl<ADDR> From<ADDR> for Source<ADDR> {
-    fn from(addr: ADDR) -> Self {
-        Self::new(addr)
-    }
-}
-
-impl<ADDR> From<Destination<ADDR>> for Source<ADDR> {
-    fn from(addr: Destination<ADDR>) -> Self {
-        addr.flip()
-    }
-}
-
 impl<ADDR> Deref for Source<ADDR> {
     type Target = ADDR;
 
@@ -118,18 +106,6 @@ impl<ADDR> Destination<ADDR> {
     /// Returns the underlying value inside this `Destination`
     pub fn into_inner(self) -> ADDR {
         self.0
-    }
-}
-
-impl<ADDR> From<ADDR> for Destination<ADDR> {
-    fn from(addr: ADDR) -> Self {
-        Self::new(addr)
-    }
-}
-
-impl<ADDR> From<Source<ADDR>> for Destination<ADDR> {
-    fn from(addr: Source<ADDR>) -> Self {
-        addr.flip()
     }
 }
 
@@ -250,7 +226,7 @@ mod tests {
     #[test]
     fn test_no_copy_type() {
         let hello: &str = "Hello World!";
-        let a: Source<&str> = hello.into();
+        let a: Source<&str> = Source::new(hello);
         assert_eq!(*a, hello);
     }
 
