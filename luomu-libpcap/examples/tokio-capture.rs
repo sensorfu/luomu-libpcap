@@ -9,7 +9,8 @@ use luomu_libpcap::tokio as tokio_capture;
 use luomu_libpcap::{Packet, Pcap};
 
 fn main() -> Result<()> {
-    env_logger::init();
+    tracing_subscriber::fmt::init();
+
     let runtime = tokio::runtime::Runtime::new()?;
     runtime.block_on(async { capture("en0").await })
 }

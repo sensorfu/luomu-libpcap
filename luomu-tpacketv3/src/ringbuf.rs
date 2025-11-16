@@ -163,7 +163,7 @@ impl Map {
 
 impl Drop for Map {
     fn drop(&mut self) {
-        log::trace!("Dropping mapping @{:?}", self.ptr);
+        tracing::trace!("Dropping mapping @{:?}", self.ptr);
         unsafe { libc::munmap(self.ptr, self.map_size) };
     }
 }

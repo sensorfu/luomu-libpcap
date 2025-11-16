@@ -2,7 +2,6 @@
 
 #[cfg(target_os = "linux")]
 mod linux {
-
     use clap::Parser;
     use luomu_tpacketv3 as tpacketv3;
     use std::sync::Arc;
@@ -20,19 +19,19 @@ mod linux {
                         continue;
                     }
                     _ => {
-                        warn!("Channel closed, stopping");
+                        tracing::warn!("Channel closed, stopping");
                         break;
                     }
                 },
                 Ok(_) => pkt_count += 1,
             }
         }
-        debug!("Stopping, consumer received {} packets", pkt_count);
+        tracing::debug!("Stopping, consumer received {pkt_count} packets");
     }
 
     fn print_stats(reader: &tpacketv3::Reader<'_>) {
         if let Ok((packets, dropped)) = reader.stats() {
-            debug!("Tpacket packets: {}, dropped: {}", packets, dropped);
+            tracing::debug!("Tpacket packets: {packets}, dropped: {dropped}");
         }
     }
 
@@ -52,7 +51,7 @@ mod linux {
                         false_wakes += 1;
                     }
                     tpacketv3::WaitError::IoError(err) => {
-                        warn!("Fatal error while reading: {}", err);
+                        tracing::warn!("Fatal error while reading: {err}");
                         break;
                     }
                 },
@@ -61,7 +60,7 @@ mod linux {
                     for pkt in it {
                         packets += 1;
                         if let Err(e) = ch.send(pkt.packet().to_vec()) {
-                            warn!("Unable to send packet to consumer: {}", e);
+                            tracing::warn!("Unable to send packet to consumer: {e}");
                             // break out of reading packets, as this means likely
                             // that consumer has closed the channel and we are
                             // going to stop anyway
@@ -73,12 +72,10 @@ mod linux {
             }
         }
         print_stats(&reader);
-        debug!(
-            "Packet producer {} stopping; (wakes: {}/ false wakes: {} packets: {})",
-            thread::current().name().unwrap_or("N/A"),
-            wakes,
-            false_wakes,
-            packets
+        let thread = thread::current();
+        tracing::debug!(
+            "Packet producer {} stopping; (wakes: {wakes}/ false wakes: {false_wakes} packets: {packets})",
+            thread.name().unwrap_or("N/A"),
         );
     }
 
@@ -88,14 +85,15 @@ mod linux {
         ch: mpsc::Sender<Vec<u8>>,
         stop: Arc<AtomicBool>,
     ) {
-        debug!(
+        let thread = thread::current();
+        tracing::debug!(
             "Worker {}, using Buffer with {} blocks of {} bytes",
-            thread::current().name().unwrap_or("N/A"),
+            thread.name().unwrap_or("N/A"),
             params.block_count,
             params.block_size
         );
         match tpacketv3::reader(interface, None, params) {
-            Err(e) => warn!("Unable to create reader: {}", e),
+            Err(e) => tracing::warn!("Unable to create reader: {e}"),
             Ok(rd) => {
                 packet_producer(rd, ch, stop);
             }
@@ -134,8 +132,7 @@ mod linux {
     }
 
     pub fn main() {
-        env_logger::init();
-
+        tracing_subscriber::fmt::init();
         let cli = Args::parse();
 
         let read_time: Duration = Duration::from_secs(cli.duration);
@@ -152,7 +149,7 @@ mod linux {
                 "qm" => Some(tpacketv3::FanoutMode::QM(groupid)),
                 "cpu" => Some(tpacketv3::FanoutMode::CPU(groupid)),
                 "rnd" => Some(tpacketv3::FanoutMode::RND(groupid)),
-                _ => panic!("Fanout mode {} not supported", v),
+                _ => panic!("Fanout mode {v} not supported"),
             }
         } else {
             None
@@ -184,21 +181,18 @@ mod linux {
                     .unwrap(),
             );
         }
-        debug!("Waiting for {} secons", read_time.as_secs());
+        tracing::debug!("Waiting for {} secons", read_time.as_secs());
         thread::sleep(read_time);
-        debug!("Stopping threads");
+        tracing::debug!("Stopping threads");
         stop.store(true, std::sync::atomic::Ordering::SeqCst);
         for h in producers {
             h.join().unwrap();
         }
         consumer_handle.join().unwrap();
-        debug!("Done");
+        tracing::debug!("Done");
     }
 }
 
-#[cfg(target_os = "linux")]
-#[macro_use]
-extern crate log;
 #[cfg(target_os = "linux")]
 fn main() {
     linux::main()

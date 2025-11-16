@@ -89,10 +89,10 @@ impl Fd {
         let proto = htons(libc::ETH_P_ALL as u16);
         let fd = unsafe { libc::socket(libc::AF_PACKET, libc::SOCK_RAW, proto as libc::c_int) };
         if fd < 0 {
-            log::warn!("Unable to create socket");
+            tracing::warn!("Unable to create socket");
             return Err(std::io::Error::last_os_error());
         }
-        log::trace!("Created socket with fd={}", fd);
+        tracing::trace!("Created socket with fd={fd}");
         Ok(Fd { fd })
     }
 
@@ -101,7 +101,7 @@ impl Fd {
     }
 
     pub fn setopt<T>(&self, opt: Option<T>) -> Result<(), std::io::Error> {
-        log::trace!(
+        tracing::trace!(
             "option value ptr={:?} oplen={}",
             opt.val().ptr(),
             opt.val().optlen()
@@ -155,7 +155,7 @@ impl Fd {
     }
 
     pub fn close(self) {
-        log::trace!("Closing socket with fd={}", self.fd);
+        tracing::trace!("Closing socket with fd={}", self.fd);
         unsafe { libc::close(self.fd) };
     }
 
