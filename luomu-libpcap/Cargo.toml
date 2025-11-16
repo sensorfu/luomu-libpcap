@@ -15,9 +15,9 @@ async-tokio = [ "dep:futures-core", "dep:tokio" ]
 
 [dependencies]
 libc.workspace = true
-log.workspace = true
 luomu-common.workspace = true
 luomu-libpcap-sys.workspace = true
+tracing.workspace = true
 
 # async-tokio
 futures-core = { workspace = true, optional = true }
@@ -25,10 +25,10 @@ tokio = { workspace = true, optional = true }
 
 [dev-dependencies]
 anyhow.workspace = true
-env_logger.workspace = true
 futures-util.workspace = true
 luomu-libpcap = { workspace = true, features = [ "async-tokio" ] }
 tokio = { workspace = true, features = [ "time" ] }
+tracing-subscriber.workspace = true
 
 [lints]
 workspace = true

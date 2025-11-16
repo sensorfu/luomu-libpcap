@@ -11,12 +11,12 @@ repository.workspace = true
 
 [dependencies]
 libc.workspace = true
-log.workspace = true
 luomu-libpcap.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]
 clap.workspace = true
-env_logger.workspace = true
+tracing-subscriber.workspace = true
 
 [lints]
 workspace = true

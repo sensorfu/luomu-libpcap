@@ -5,10 +5,11 @@ use std::env;
 use luomu_libpcap::{Packet, Pcap};
 
 fn main() {
-    env_logger::init();
+    tracing_subscriber::fmt::init();
+
     let fname = match env::args().nth(1) {
         None => {
-            log::error!("No PCAP file name given");
+            tracing::error!("No PCAP file name given");
             return;
         }
         Some(n) => n,

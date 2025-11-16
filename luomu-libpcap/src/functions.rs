@@ -22,8 +22,6 @@ use std::os::fd::AsRawFd;
 use std::path::Path;
 use std::time::Duration;
 
-use log::trace;
-
 use crate::{
     Address, AddressIter, BorrowedPacket, Errbuf, Error, Interface, InterfaceAddress, InterfaceFlag, MacAddr,
     PcapDumper, PcapFilter, PcapIfT, PcapStat, PcapT, Result,
@@ -50,7 +48,7 @@ pub fn pcap_create(source: &str) -> Result<PcapT> {
 
     let pcap_t = unsafe { libpcap::pcap_create(src.as_ptr(), errbuf.as_mut_ptr()) };
 
-    trace!("pcap_create({}) => {:p}", source, pcap_t);
+    tracing::trace!("pcap_create({source}) => {pcap_t:p}");
     if pcap_t.is_null() {
         errbuf.as_error()?;
     }
@@ -72,7 +70,7 @@ pub fn pcap_open_offline<P: AsRef<Path>>(savefile: P) -> Result<PcapT> {
 
     let pcap_t = unsafe { libpcap::pcap_open_offline(fname.as_ptr(), errbuf.as_mut_ptr()) };
 
-    trace!("pcap_open_offline({:?}) => {:p}", fname, pcap_t);
+    tracing::trace!("pcap_open_offline({fname:?}) => {pcap_t:p}");
     if pcap_t.is_null() {
         errbuf.as_error()?;
     }
@@ -90,7 +88,7 @@ pub fn pcap_open_offline<P: AsRef<Path>>(savefile: P) -> Result<PcapT> {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_close.3pcap.html>
 pub fn pcap_close(pcap_t: PcapT) {
-    trace!("pcap_close({:p})", pcap_t.pcap_t);
+    tracing::trace!("pcap_close({:p})", pcap_t.pcap_t);
     // PcapT is owned by this function and dropped at this point since it's no
     // longer needed. Dropping frees the allocated resources.
 }
@@ -103,7 +101,7 @@ pub fn pcap_close(pcap_t: PcapT) {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_set_buffer_size.3pcap.html>
 pub fn pcap_set_buffer_size(pcap_t: &PcapT, buffer_size: usize) -> Result<()> {
-    trace!("pcap_set_buffer_size({:p}, {})", pcap_t.pcap_t, buffer_size);
+    tracing::trace!("pcap_set_buffer_size({:p}, {buffer_size})", pcap_t.pcap_t);
     let ret = unsafe { libpcap::pcap_set_buffer_size(pcap_t.pcap_t, buffer_size as libc::c_int) };
     check_pcap_error(pcap_t, ret)
 }
@@ -115,7 +113,7 @@ pub fn pcap_set_buffer_size(pcap_t: &PcapT, buffer_size: usize) -> Result<()> {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_set_promisc.3pcap.html>
 pub fn pcap_set_promisc(pcap_t: &PcapT, promiscuous: bool) -> Result<()> {
-    trace!("pcap_set_promisc({:p}, {})", pcap_t.pcap_t, promiscuous);
+    tracing::trace!("pcap_set_promisc({:p}, {promiscuous})", pcap_t.pcap_t);
     let ret = unsafe { libpcap::pcap_set_promisc(pcap_t.pcap_t, promiscuous.into()) };
     check_pcap_error(pcap_t, ret)
 }
@@ -127,7 +125,7 @@ pub fn pcap_set_promisc(pcap_t: &PcapT, promiscuous: bool) -> Result<()> {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_set_snaplen.3pcap.html>
 pub fn pcap_set_snaplen(pcap_t: &PcapT, snaplen: usize) -> Result<()> {
-    trace!("pcap_set_snaplen({:p}, {})", pcap_t.pcap_t, snaplen);
+    tracing::trace!("pcap_set_snaplen({:p}, {snaplen})", pcap_t.pcap_t);
     let ret = unsafe { libpcap::pcap_set_snaplen(pcap_t.pcap_t, snaplen as libc::c_int) };
     check_pcap_error(pcap_t, ret)
 }
@@ -140,7 +138,7 @@ pub fn pcap_set_snaplen(pcap_t: &PcapT, snaplen: usize) -> Result<()> {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_set_immediate_mode.3pcap.html>
 pub fn pcap_set_immediate_mode(pcap_t: &PcapT, immediate: bool) -> Result<()> {
-    trace!("pcap_set_immediate_mode({:p}, {})", pcap_t.pcap_t, immediate);
+    tracing::trace!("pcap_set_immediate_mode({:p}, {immediate})", pcap_t.pcap_t,);
     let ret = unsafe { libpcap::pcap_set_immediate_mode(pcap_t.pcap_t, immediate.into()) };
     check_pcap_error(pcap_t, ret)
 }
@@ -153,7 +151,7 @@ pub fn pcap_set_immediate_mode(pcap_t: &PcapT, immediate: bool) -> Result<()> {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_set_timeout.3pcap.html>
 pub fn pcap_set_timeout(pcap_t: &PcapT, to_ms: i32) -> Result<()> {
-    trace!("pcap_set_timeout({:p}, {})", pcap_t.pcap_t, to_ms);
+    tracing::trace!("pcap_set_timeout({:p}, {to_ms})", pcap_t.pcap_t);
     let ret = unsafe { libpcap::pcap_set_timeout(pcap_t.pcap_t, to_ms as libc::c_int) };
     check_pcap_error(pcap_t, ret)
 }
@@ -209,7 +207,7 @@ pub fn pcap_get_required_select_timeout(pcap_t: &PcapT) -> Option<Duration> {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_activate.3pcap.html>
 pub fn pcap_activate(pcap_t: &PcapT) -> Result<()> {
-    trace!("pcap_activate({:p})", pcap_t.pcap_t);
+    tracing::trace!("pcap_activate({:p})", pcap_t.pcap_t);
     let ret = unsafe { libpcap::pcap_activate(pcap_t.pcap_t) };
     check_pcap_error(pcap_t, ret)?;
 
@@ -233,7 +231,7 @@ pub fn pcap_activate(pcap_t: &PcapT) -> Result<()> {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_geterr.3pcap.html>
 pub fn get_error(pcap_t: &PcapT) -> Result<Error> {
-    trace!("get_error({:p})", pcap_t.pcap_t);
+    tracing::trace!("get_error({:p})", pcap_t.pcap_t);
     let ptr = unsafe { libpcap::pcap_geterr(pcap_t.pcap_t) };
     let cstr = unsafe { CStr::from_ptr(ptr) };
     let err = cstr.to_str()?.to_owned();
@@ -261,13 +259,10 @@ pub fn pcap_stats(pcap_t: &PcapT, stat: &mut PcapStat) -> Result<()> {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_inject.3pcap.html>
 pub fn pcap_inject(pcap_t: &PcapT, buf: &[u8]) -> Result<usize> {
-    trace!(
-        "pcap_inject({:p}, {:?}, {})",
-        pcap_t.pcap_t,
-        buf.as_ptr(),
-        buf.len()
-    );
-    let ret = unsafe { libpcap::pcap_inject(pcap_t.pcap_t, buf.as_ptr() as *const c_void, buf.len()) };
+    let ptr = buf.as_ptr();
+    let len = buf.len();
+    tracing::trace!("pcap_inject({:p}, {ptr:?}, {len})", pcap_t.pcap_t,);
+    let ret = unsafe { libpcap::pcap_inject(pcap_t.pcap_t, ptr as *const c_void, len) };
 
     if ret < 0 {
         check_pcap_error(pcap_t, ret)?;
@@ -289,7 +284,7 @@ pub fn pcap_inject(pcap_t: &PcapT, buf: &[u8]) -> Result<usize> {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_compile.3pcap.html>
 pub fn pcap_compile(pcap_t: &PcapT, filter: &str) -> Result<PcapFilter> {
-    trace!("pcap_compile({:p}, {})", pcap_t.pcap_t, filter);
+    tracing::trace!("pcap_compile({:p}, {filter})", pcap_t.pcap_t);
     let mut bpf_program: MaybeUninit<libpcap::bpf_program> = MaybeUninit::zeroed();
     let filter = CString::new(filter)?;
     let optimize = 1;
@@ -321,9 +316,10 @@ pub fn pcap_compile(pcap_t: &PcapT, filter: &str) -> Result<PcapFilter> {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_setfilter.3pcap.html>
 pub fn pcap_setfilter(pcap_t: &PcapT, pcap_filter: &mut PcapFilter) -> Result<()> {
-    trace!(
+    tracing::trace!(
         "pcap_setfilter({:p}, {:p})",
-        pcap_t.pcap_t, &pcap_filter.bpf_program
+        pcap_t.pcap_t,
+        &pcap_filter.bpf_program
     );
 
     let ret = unsafe { libpcap::pcap_setfilter(pcap_t.pcap_t, &mut pcap_filter.bpf_program) };
@@ -339,7 +335,7 @@ pub fn pcap_setfilter(pcap_t: &PcapT, pcap_filter: &mut PcapFilter) -> Result<()
 ///
 /// <https://www.tcpdump.org/manpages/pcap_freecode.3pcap.html>
 pub fn pcap_freecode(pcap_filter: PcapFilter) {
-    trace!("pcap_freecode({:p})", &pcap_filter.bpf_program);
+    tracing::trace!("pcap_freecode({:p})", &pcap_filter.bpf_program);
     // PcapFilter is owned by this function and dropped at this point since it's
     // no longer needed. Dropping frees the allocated resources.
 }
@@ -350,7 +346,7 @@ pub fn pcap_freecode(pcap_filter: PcapFilter) {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_next_ex.3pcap.html>
 pub fn pcap_next_ex(pcap_t: &PcapT) -> Result<BorrowedPacket> {
-    trace!("pcap_next_ex({:p})", pcap_t.pcap_t);
+    tracing::trace!("pcap_next_ex({:p})", pcap_t.pcap_t);
     let mut header: *mut libpcap::pcap_pkthdr = std::ptr::null_mut();
     let mut packet: *const libc::c_uchar = std::ptr::null();
 
@@ -408,7 +404,7 @@ pub fn pcap_open_dead() -> Result<PcapT> {
 // because we write into a file pointed by `PcapDumper`.
 #[allow(clippy::needless_pass_by_value)]
 pub fn pcap_dump_fopen(pcap_t: &PcapT, file: &mut std::fs::File) -> Result<PcapDumper> {
-    trace!("pcap_dump_fopen({:p}, {:?})", pcap_t.pcap_t, file);
+    tracing::trace!("pcap_dump_fopen({:p}, {file:?})", pcap_t.pcap_t);
     let mode = b"wb\0";
 
     let filedesc = unsafe { libc::fdopen(file.as_raw_fd(), mode.as_ptr() as *const libc::c_char) };
@@ -436,7 +432,7 @@ pub fn pcap_dump_fopen(pcap_t: &PcapT, file: &mut std::fs::File) -> Result<PcapD
 // because we write into a file pointed by `PcapDumper`.
 #[allow(clippy::needless_pass_by_value)]
 pub fn pcap_dump_flush(dumper: &mut PcapDumper) -> Result<()> {
-    trace!("pcap_dump_flush({:p})", dumper.pcap_dumper_t);
+    tracing::trace!("pcap_dump_flush({:p})", dumper.pcap_dumper_t);
     let ret = unsafe { libpcap::pcap_dump_flush(dumper.pcap_dumper_t) };
     if ret == 0 {
         Ok(())
@@ -462,7 +458,7 @@ pub fn pcap_dump_flush(dumper: &mut PcapDumper) -> Result<()> {
 // because we write into a file pointed by `PcapDumper`.
 #[allow(clippy::needless_pass_by_value)]
 pub fn pcap_dump(dumper: &mut PcapDumper, pkthdr: &libpcap::pcap_pkthdr, bytes: &[u8]) {
-    trace!("pcap_dump({:p}, {:?})", dumper.pcap_dumper_t, pkthdr);
+    tracing::trace!("pcap_dump({:p}, {pkthdr:?})", dumper.pcap_dumper_t);
     unsafe { libpcap::pcap_dump(dumper.pcap_dumper_t as *mut libc::c_uchar, pkthdr, bytes.as_ptr()) }
 }
 
@@ -484,7 +480,7 @@ pub fn pcap_findalldevs() -> Result<PcapIfT> {
 
     match ret {
         PCAP_SUCCESS => {
-            trace!("pcap_findalldevs() => {:p}", pcap_if_t);
+            tracing::trace!("pcap_findalldevs() => {pcap_if_t:p}");
             Ok(PcapIfT { pcap_if_t })
         }
         PCAP_ERROR => errbuf.as_error(),
@@ -498,13 +494,13 @@ pub fn pcap_findalldevs() -> Result<PcapIfT> {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_findalldevs.3pcap.html>
 pub fn pcap_freealldevs(pcap_if_t: PcapIfT) {
-    trace!("pcap_freealldevs({:p})", pcap_if_t.pcap_if_t);
+    tracing::trace!("pcap_freealldevs({:p})", pcap_if_t.pcap_if_t);
     // PcapIfT is owned by this function and dropped at this point since it's no
     // longer needed. Dropping frees the allocated resources.
 }
 
 pub(crate) fn try_interface_from(pcap_if_t: *mut libpcap::pcap_if_t) -> Result<Interface> {
-    trace!("try_interface_from({:p})", pcap_if_t);
+    tracing::trace!("try_interface_from({pcap_if_t:p})");
     let name: Box<str> = {
         let name = unsafe { (*pcap_if_t).name };
         if name.is_null() {
@@ -553,7 +549,7 @@ pub(crate) fn try_interface_from(pcap_if_t: *mut libpcap::pcap_if_t) -> Result<I
 }
 
 fn from_sockaddr(addr: *const libc::sockaddr) -> Option<Address> {
-    trace!("from_sockaddr({:p})", addr);
+    tracing::trace!("from_sockaddr({addr:p})");
 
     if addr.is_null() {
         return None;
@@ -600,14 +596,14 @@ fn from_sockaddr(addr: *const libc::sockaddr) -> Option<Address> {
         }
 
         n => {
-            log::error!("Unsupported sa_family {}", n);
+            tracing::error!("Unsupported sa_family {n}");
             None
         }
     }
 }
 
 pub(crate) fn try_address_from(pcap_addr_t: *mut libpcap::pcap_addr_t) -> Option<InterfaceAddress> {
-    trace!("try_address_from({:p})", pcap_addr_t);
+    tracing::trace!("try_address_from({pcap_addr_t:p})");
     debug_assert!(!pcap_addr_t.is_null(), "null pointer");
     let addr = {
         let addr = unsafe { (*pcap_addr_t).addr as *const libc::sockaddr };
@@ -638,7 +634,7 @@ pub(crate) fn try_address_from(pcap_addr_t: *mut libpcap::pcap_addr_t) -> Option
 }
 
 fn get_interface_flags(val: u32) -> BTreeSet<InterfaceFlag> {
-    trace!("get_interface_flags({})", val);
+    tracing::trace!("get_interface_flags({val})");
     let mut flags = BTreeSet::new();
     use InterfaceFlag::*;
     for flag in &[
@@ -659,7 +655,7 @@ fn get_interface_flags(val: u32) -> BTreeSet<InterfaceFlag> {
 }
 
 fn status_to_str(error: libc::c_int) -> Result<String> {
-    trace!("status_to_str({})", error);
+    tracing::trace!("status_to_str({error})");
     let ptr = unsafe { libpcap::pcap_statustostr(error) };
     let cstr = unsafe { CStr::from_ptr(ptr) };
     let status = cstr.to_str()?.to_owned();
@@ -668,12 +664,12 @@ fn status_to_str(error: libc::c_int) -> Result<String> {
 
 /// Check for `libpcap` error.
 fn check_pcap_error(pcap_t: &PcapT, ret: i32) -> Result<()> {
-    if log::log_enabled!(log::Level::Trace) {
+    if tracing::event_enabled!(tracing::Level::TRACE) {
         let status = match ret {
             0 => "ok".to_string(),
             n => status_to_str(n).unwrap_or_default(),
         };
-        trace!("check_pcap_error({:p}, {}) = {}", pcap_t.pcap_t, ret, status);
+        tracing::trace!("check_pcap_error({:p}, {ret}) = {status}", pcap_t.pcap_t,);
     }
 
     match ret {

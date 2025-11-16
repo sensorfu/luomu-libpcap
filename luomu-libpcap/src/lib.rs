@@ -86,7 +86,7 @@ impl PcapT {
 
 impl Drop for PcapT {
     fn drop(&mut self) {
-        log::trace!("PcapT::drop({:p})", self.pcap_t);
+        tracing::trace!("PcapT::drop({:p})", self.pcap_t);
         unsafe { luomu_libpcap_sys::pcap_close(self.pcap_t) }
     }
 }
@@ -344,7 +344,7 @@ impl PcapFilter {
 
 impl Drop for PcapFilter {
     fn drop(&mut self) {
-        log::trace!("PcapFilter::drop({:p})", &self.bpf_program);
+        tracing::trace!("PcapFilter::drop({:p})", &self.bpf_program);
         unsafe { luomu_libpcap_sys::pcap_freecode(&mut self.bpf_program) }
     }
 }
@@ -368,7 +368,7 @@ impl PcapDumper {
 
 impl Drop for PcapDumper {
     fn drop(&mut self) {
-        log::trace!("PcapDumper::drop({:p})", self.pcap_dumper_t);
+        tracing::trace!("PcapDumper::drop({:p})", self.pcap_dumper_t);
         let _res = pcap_dump_flush(self);
         unsafe { luomu_libpcap_sys::pcap_dump_close(self.pcap_dumper_t) }
     }
@@ -450,7 +450,7 @@ impl Iterator for NonBlockingIter<'_> {
                 // return None if we get error while polling, expecting that
                 // pcap_next_ex() will return error next time if the handle
                 // is no longer valid etc.
-                log::trace!("Error while polling: {}", err);
+                tracing::trace!("Error while polling: {err}");
                 None
             }
         }
@@ -527,7 +527,7 @@ impl PcapIfT {
     pub fn find_interface_with_name(&self, name: &str) -> Option<Interface> {
         for interface in self.get_interfaces() {
             if interface.has_name(name) {
-                log::trace!("find_interface_with_name({}) = {:?}", name, interface);
+                tracing::trace!("find_interface_with_name({name}) = {interface:?}");
                 return Some(interface);
             }
         }
@@ -538,7 +538,7 @@ impl PcapIfT {
     pub fn find_interface_with_ip(&self, ip: &IpAddr) -> Option<String> {
         for interface in self.get_interfaces() {
             if interface.has_address(ip) {
-                log::trace!("find_interface_with_ip({}) = {:?}", ip, interface);
+                tracing::trace!("find_interface_with_ip({ip}) = {interface:?}");
                 return Some(interface.name.into_string());
             }
         }
@@ -548,7 +548,7 @@ impl PcapIfT {
 
 impl Drop for PcapIfT {
     fn drop(&mut self) {
-        log::trace!("PcapIfT::drop({:?})", self.pcap_if_t);
+        tracing::trace!("PcapIfT::drop({:?})", self.pcap_if_t);
         unsafe { luomu_libpcap_sys::pcap_freealldevs(self.pcap_if_t) }
     }
 }
@@ -626,7 +626,7 @@ impl Iterator for InterfaceIter {
     type Item = Interface;
 
     fn next(&mut self) -> Option<Interface> {
-        log::trace!(
+        tracing::trace!(
             "InterfaceIter(start: {:p}, next: {:p})",
             self.start,
             self.next.unwrap_or(std::ptr::null_mut())
@@ -648,7 +648,7 @@ impl Iterator for InterfaceIter {
         match try_interface_from(pcap_if_t) {
             Ok(dev) => Some(dev),
             Err(err) => {
-                log::error!("try_interface_from{:p}: {}", pcap_if_t, err);
+                tracing::error!("try_interface_from{:p}: {err}", pcap_if_t);
                 None
             }
         }
@@ -682,7 +682,7 @@ impl Iterator for AddressIter {
     type Item = InterfaceAddress;
 
     fn next(&mut self) -> Option<InterfaceAddress> {
-        log::trace!(
+        tracing::trace!(
             "AddressIter(start: {:p}, next: {:p})",
             self.start,
             self.next.unwrap_or(std::ptr::null_mut())

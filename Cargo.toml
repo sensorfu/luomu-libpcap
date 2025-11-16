@@ -28,13 +28,13 @@ luomu-getifaddrs.path = "luomu-getifaddrs/"
 anyhow = "1"
 bitflags = "2"
 cfg-if = "1"
-env_logger = { version = "0.11", default-features = false }
 futures-core = "0.3"
 futures-util = { version = "0.3", default-features = false }
 libc = { version = "0.2", features = ["extra_traits"] }
-log = { version = "0.4", default-features = false }
 quickcheck = { version = "1", default-features = false }
 tokio = { version = "1", features = [ "rt-multi-thread", "sync" ] }
+tracing = { version = "0.1", default-features = false }
+tracing-subscriber = { version = "0.3", default-features = false, features = [ "env-filter", "fmt" ] }
 cc = "1"
 liblzma = { version = "0.4", features = ["static"] }
 tar = {version = "0.4", default-features = false }

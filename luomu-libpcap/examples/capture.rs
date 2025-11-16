@@ -3,7 +3,7 @@
 use luomu_libpcap::{Packet, Pcap, Result};
 
 fn main() -> Result<()> {
-    env_logger::init();
+    tracing_subscriber::fmt::init();
 
     let pcap = Pcap::builder("en0")?
         .set_promiscuous(true)?

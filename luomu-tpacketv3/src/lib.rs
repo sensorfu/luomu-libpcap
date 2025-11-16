@@ -128,8 +128,8 @@ pub fn reader<'a>(
     parameters: ReaderParameters,
 ) -> Result<Reader<'a>, String> {
     let index = ifindex_for(interface);
-    log::trace!("Index for interface {} is {}", interface, index);
     let sock = socket::Fd::create().map_err(|e| format!("Can not create socket {}", e))?;
+    tracing::trace!("Index for interface {interface} is {index}");
 
     // try to compile the filter, if one is set, first
     let filter = match pcap_filter {
@@ -141,7 +141,7 @@ pub fn reader<'a>(
     let opt = socket::OptValue {
         val: if_packet::TPACKET_V3,
     };
-    log::trace!("Setting packet version");
+    tracing::trace!("Setting packet version");
     sock.setopt(socket::Option::PacketVersion(opt))
         .map_err(|e| format!("packet version sockopt failed: {}", e))?;
 
@@ -155,17 +155,17 @@ pub fn reader<'a>(
         tp_sizeof_priv: 0,
     };
 
-    log::trace!("setting RX_PACKET request");
+    tracing::trace!("setting RX_PACKET request");
     sock.setopt(socket::Option::PacketRxRing(socket::OptValue { val: req }))
         .map_err(|e| format!("RX_RING sockopt failed: {}", e))?;
 
     if let Some(f) = filter {
-        log::trace!("setting filter");
+        tracing::trace!("setting filter");
         sock.set_filter(f)
             .map_err(|e| format!("Can not set filter: {}", e))?;
     }
 
-    log::trace!("Setting PROMISC mode");
+    tracing::trace!("Setting PROMISC mode");
     let mr = libc::packet_mreq {
         mr_ifindex: index as libc::c_int,
         mr_type: libc::PACKET_MR_PROMISC as u16,
@@ -175,11 +175,11 @@ pub fn reader<'a>(
     sock.setopt(socket::Option::PacketAddMembership(socket::OptValue { val: mr }))
         .map_err(|e| format!("ADD_MEMBERSHIP sockopt failed: {}", e))?;
 
-    log::trace!("Mapping ring");
+    tracing::trace!("Mapping ring");
     let map = ringbuf::Map::create(parameters.block_size, parameters.block_count, sock.raw_fd())
         .map_err(|e| format!("Can not mmap for ringbuffer: {}", e))?;
 
-    log::trace!("binding to interface");
+    tracing::trace!("binding to interface");
     let ll = libc::sockaddr_ll {
         sll_family: libc::AF_PACKET as u16,
         sll_protocol: socket::htons(libc::ETH_P_ALL as u16),
@@ -193,7 +193,7 @@ pub fn reader<'a>(
         .map_err(|e| format!("Can not bind socket to interface: {}", e))?;
 
     if let Some(mode) = parameters.fanout {
-        log::trace!("Setting fanout mode {:0X}", mode.arg());
+        tracing::trace!("Setting fanout mode {:0X}", mode.arg());
         sock.setopt(socket::Option::PacketFanout(socket::OptValue { val: mode.arg() }))
             .map_err(|e| format!("Could not set fanout mode: {}", e))?;
     }
@@ -277,7 +277,7 @@ impl<'a> Reader<'a> {
     /// not be called.
     pub fn wait_block(&self, timeout: Duration) -> Result<PacketIter<'a>, WaitError> {
         let idx = self.block_index;
-        log::trace!("Waiting block {}", idx);
+        tracing::trace!("Waiting block {idx}");
         match self.sock.poll(timeout) {
             Ok(ready) => {
                 if !ready {
@@ -288,7 +288,7 @@ impl<'a> Reader<'a> {
                 }
                 let pkt = self.blocks[idx].get_first_packet();
                 let count = self.blocks[idx].get_number_of_packets();
-                log::trace!("Block {} ready with {} packets", idx, count);
+                tracing::trace!("Block {idx} ready with {count} packets");
                 Ok(PacketIter {
                     pkt: Some(pkt),
                     count,
@@ -303,7 +303,7 @@ impl<'a> Reader<'a> {
     /// ready for capturing new packets and advance `Reader` to poll next
     /// block when `wait_block()` is called.
     pub fn flush_block(&mut self) {
-        log::trace!("Flushing block {}", self.block_index);
+        tracing::trace!("Flushing block {}", self.block_index);
         self.blocks[self.block_index].flush();
         self.block_index = (self.block_index + 1) % self.blocks.len();
     }
@@ -311,7 +311,7 @@ impl<'a> Reader<'a> {
 
 impl Drop for Reader<'_> {
     fn drop(&mut self) {
-        log::trace!("Dropping reader");
+        tracing::trace!("Dropping reader");
         self.sock.close();
     }
 }
@@ -372,7 +372,7 @@ impl<'a> Iterator for PacketIter<'a> {
             if self.index >= self.count {
                 None
             } else {
-                log::trace!("Consuming packet {}/{}", self.index, self.count);
+                tracing::trace!("Consuming packet {}/{}", self.index, self.count);
                 let vlan_tci = if pkt.has_vlan_tci() {
                     Some(pkt.get_vlan_tci())
                 } else {
