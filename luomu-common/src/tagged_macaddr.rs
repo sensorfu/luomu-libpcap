@@ -48,8 +48,9 @@ impl TagStack {
     }
 
     /// Peek a next tag in stack, but don't pop it out.
-    pub const fn peek_tag(&self) -> Option<u16> {
-        let tag = self.0 & 0x0000000000000FFF;
+    pub const fn peek_tag(self) -> Option<u16> {
+        #[allow(clippy::unusual_byte_groupings)] // groups of 12 bits
+        let tag = self.0 & 0x0000_000_000_000_FFF;
         if tag > 0 {
             return Some(tag as u16);
         }
@@ -59,7 +60,7 @@ impl TagStack {
 
     /// Get all tags as an array.
     #[allow(clippy::unusual_byte_groupings)]
-    pub fn tag_array(&self) -> [u16; 5] {
+    pub fn tag_array(self) -> [u16; 5] {
         let mut tags = [0u16; 5];
         tags[0] = ((self.0 & 0x0FFF_000_000_000_000) >> 48) as u16;
         tags[1] = ((self.0 & 0x0000_FFF_000_000_000) >> 36) as u16;

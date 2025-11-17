@@ -60,3 +60,21 @@ unsafe-code = "deny"
 
 # Allow cfg(kani)
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
+
+[workspace.lints.clippy]
+# See https://doc.rust-lang.org/nightly/clippy/lints.html
+correctness = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }
+style = { level = "warn", priority = -1 }
+suspicious = { level = "warn", priority = -1 }
+
+## Allows
+# too early for this
+must_use_candidate = "allow"
+# Noisy lints
+doc_markdown = "allow"
+# Maybe once we start wrting proper docs, causes noise for now.
+missing_errors_doc = "allow"
+# Maybe need to be resolved one day
+cast_ptr_alignment = "allow"

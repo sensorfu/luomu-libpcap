@@ -56,15 +56,15 @@ impl Address {
         match self {
             Address::Ipv4(ip) => Some(IpAddr::V4(*ip)),
             Address::Ipv6(ip) => Some(IpAddr::V6(*ip)),
-            _ => None,
+            Address::Mac(_) => None,
         }
     }
 
     /// Return the `MacAddr` or None
     pub const fn as_mac(&self) -> Option<MacAddr> {
         match self {
+            Address::Ipv4(_) | Address::Ipv6(_) => None,
             Address::Mac(mac) => Some(*mac),
-            _ => None,
         }
     }
 }
@@ -137,7 +137,7 @@ impl TryFrom<Address> for IpAddr {
         match addr {
             Address::Ipv4(ip) => Ok(ip.into()),
             Address::Ipv6(ip) => Ok(ip.into()),
-            _ => Err(InvalidAddress),
+            Address::Mac(_) => Err(InvalidAddress),
         }
     }
 }
@@ -148,7 +148,7 @@ impl TryFrom<&Address> for Ipv4Addr {
     fn try_from(addr: &Address) -> Result<Self, Self::Error> {
         match addr {
             Address::Ipv4(ip) => Ok(*ip),
-            _ => Err(InvalidAddress),
+            Address::Ipv6(_) | Address::Mac(_) => Err(InvalidAddress),
         }
     }
 }
@@ -159,7 +159,7 @@ impl TryFrom<&Address> for Ipv6Addr {
     fn try_from(addr: &Address) -> Result<Self, Self::Error> {
         match addr {
             Address::Ipv6(ip) => Ok(*ip),
-            _ => Err(InvalidAddress),
+            Address::Ipv4(_) | Address::Mac(_) => Err(InvalidAddress),
         }
     }
 }
@@ -171,7 +171,7 @@ impl TryFrom<&Address> for IpAddr {
         match addr {
             Address::Ipv4(ip) => Ok((*ip).into()),
             Address::Ipv6(ip) => Ok((*ip).into()),
-            _ => Err(InvalidAddress),
+            Address::Mac(_) => Err(InvalidAddress),
         }
     }
 }
@@ -182,7 +182,7 @@ impl TryFrom<Address> for MacAddr {
     fn try_from(addr: Address) -> Result<Self, Self::Error> {
         match addr {
             Address::Mac(mac) => Ok(mac),
-            _ => Err(InvalidAddress),
+            Address::Ipv4(_) | Address::Ipv6(_) => Err(InvalidAddress),
         }
     }
 }

@@ -16,15 +16,16 @@ pub struct OptValue<T> {
 
 impl<T> OptValue<T> {
     fn ptr(&self) -> *const libc::c_void {
-        &self.val as *const _ as *const libc::c_void
+        (&raw const self.val).cast::<libc::c_void>()
     }
 
     fn mut_ptr(&mut self) -> *mut libc::c_void {
-        &mut self.val as *mut _ as *mut libc::c_void
+        (&raw mut self.val).cast::<libc::c_void>()
     }
 
+    #[allow(clippy::unused_self)]
     fn optlen(&self) -> libc::socklen_t {
-        mem::size_of::<T>() as libc::socklen_t
+        libc::socklen_t::try_from(mem::size_of::<T>()).unwrap_or(libc::socklen_t::MAX)
     }
 }
 
@@ -58,23 +59,23 @@ impl<T> Option<T> {
 
     fn val(&self) -> &OptValue<T> {
         match self {
-            Option::PacketVersion(v) => v,
-            Option::PacketRxRing(v) => v,
-            Option::PacketAddMembership(v) => v,
-            Option::PacketStatistics(v) => v,
-            Option::PacketFanout(v) => v,
-            Option::SocketAttachFilter(v) => v,
+            Option::PacketAddMembership(v)
+            | Option::PacketFanout(v)
+            | Option::PacketRxRing(v)
+            | Option::PacketStatistics(v)
+            | Option::PacketVersion(v)
+            | Option::SocketAttachFilter(v) => v,
         }
     }
 
     fn mut_val(&mut self) -> &mut OptValue<T> {
         match self {
-            Option::PacketVersion(v) => v,
-            Option::PacketRxRing(v) => v,
-            Option::PacketAddMembership(v) => v,
-            Option::PacketStatistics(v) => v,
-            Option::PacketFanout(v) => v,
-            Option::SocketAttachFilter(v) => v,
+            Option::PacketAddMembership(v)
+            | Option::PacketFanout(v)
+            | Option::PacketRxRing(v)
+            | Option::PacketStatistics(v)
+            | Option::PacketVersion(v)
+            | Option::SocketAttachFilter(v) => v,
         }
     }
 }
@@ -86,8 +87,9 @@ pub struct Fd {
 
 impl Fd {
     pub fn create() -> Result<Fd, std::io::Error> {
-        let proto = htons(libc::ETH_P_ALL as u16);
-        let fd = unsafe { libc::socket(libc::AF_PACKET, libc::SOCK_RAW, proto as libc::c_int) };
+        #[allow(clippy::cast_possible_truncation)]
+        let proto = libc::c_int::from(htons(libc::ETH_P_ALL as u16));
+        let fd = unsafe { libc::socket(libc::AF_PACKET, libc::SOCK_RAW, proto) };
         if fd < 0 {
             tracing::warn!("Unable to create socket");
             return Err(std::io::Error::last_os_error());
@@ -96,11 +98,11 @@ impl Fd {
         Ok(Fd { fd })
     }
 
-    pub fn raw_fd(&self) -> libc::c_int {
+    pub fn raw_fd(self) -> libc::c_int {
         self.fd
     }
 
-    pub fn setopt<T>(&self, opt: Option<T>) -> Result<(), std::io::Error> {
+    pub fn setopt<T>(&self, opt: &Option<T>) -> Result<(), std::io::Error> {
         tracing::trace!(
             "option value ptr={:?} oplen={}",
             opt.val().ptr(),
@@ -131,7 +133,7 @@ impl Fd {
                 opt.level(),
                 opt.name(),
                 opt.mut_val().mut_ptr(),
-                &mut l as *mut u32,
+                (&raw mut l).cast::<u32>(),
             )
         };
         if ret < 0 {
@@ -144,8 +146,8 @@ impl Fd {
         let ret = unsafe {
             libc::bind(
                 self.fd,
-                sll as *const _ as *const libc::c_void as *const libc::sockaddr,
-                mem::size_of::<libc::sockaddr_ll>() as u32,
+                (std::ptr::from_ref(sll).cast::<libc::c_void>()).cast::<libc::sockaddr>(),
+                u32::try_from(mem::size_of::<libc::sockaddr_ll>()).unwrap_or(u32::MAX),
             )
         };
         if ret < 0 {
@@ -169,7 +171,8 @@ impl Fd {
             revents: 0,
         };
 
-        let ret = unsafe { libc::poll(&mut pfd, 1, timeout.as_millis() as i32) };
+        let timeout = i32::try_from(timeout.as_millis()).unwrap_or(i32::MAX);
+        let ret = unsafe { libc::poll(&raw mut pfd, 1, timeout) };
         match ret {
             0 => Ok(false),
             -1 => Err(std::io::Error::last_os_error()),
@@ -178,12 +181,12 @@ impl Fd {
     }
 
     /// Attach given BPF filter to socket.
-    pub fn set_filter(&self, filt: PcapFilter) -> Result<(), std::io::Error> {
+    pub fn set_filter(&self, filt: &PcapFilter) -> Result<(), std::io::Error> {
         let prog = sock_fprog {
-            len: filt.get_raw_filter_len() as u16,
+            len: u16::try_from(filt.get_raw_filter_len()).unwrap_or(u16::MAX),
             filter: filt.get_raw_filter(),
         };
-        self.setopt(Option::SocketAttachFilter(OptValue { val: prog }))
+        self.setopt(&Option::SocketAttachFilter(OptValue { val: prog }))
     }
 }
 

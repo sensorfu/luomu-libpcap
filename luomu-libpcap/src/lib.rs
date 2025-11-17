@@ -33,6 +33,7 @@ use luomu_common::{Address, MacAddr};
 use luomu_libpcap_sys as libpcap;
 
 pub mod functions;
+#[allow(clippy::wildcard_imports)]
 use functions::*;
 
 mod error;
@@ -49,6 +50,7 @@ pub type Result<T> = result::Result<T, Error>;
 
 /// Keeper of the `libpcap`'s `pcap_t`.
 pub struct PcapT {
+    #[allow(clippy::struct_field_names)]
     pcap_t: *mut libpcap::pcap_t,
     #[allow(dead_code)]
     errbuf: Errbuf,
@@ -183,7 +185,7 @@ impl Pcap {
     /// Returns statistics from current capture. The values represent packet
     /// statistics from the start of the run to the time of the call.
     pub fn stats(&self) -> Result<PcapStat> {
-        let mut stats: PcapStat = Default::default();
+        let mut stats: PcapStat = PcapStat::default();
         match pcap_stats(&self.pcap_t, &mut stats) {
             Ok(()) => Ok(stats),
             Err(e) => Err(e),
@@ -213,7 +215,7 @@ impl Errbuf {
     /// Return libpcap's error message as borrowed string.
     fn as_str(&self) -> Result<&str> {
         use std::ffi::CStr;
-        let cstr = unsafe { CStr::from_ptr(self.0.as_ptr() as *const libc::c_char) };
+        let cstr = unsafe { CStr::from_ptr(self.0.as_ptr().cast::<libc::c_char>()) };
         Ok(cstr.to_str()?)
     }
 
@@ -228,7 +230,7 @@ impl Errbuf {
     }
 
     fn as_mut_ptr<T>(&mut self) -> *mut T {
-        self.0.as_mut_ptr() as *mut T
+        self.0.as_mut_ptr().cast::<T>()
     }
 }
 
@@ -273,7 +275,8 @@ impl PcapBuilder {
     /// capture handle when the handle is activated to to_ms, which is in units of
     /// milliseconds.
     pub fn set_timeout(self, to_ms: Duration) -> Result<PcapBuilder> {
-        pcap_set_timeout(&self.pcap_t, (to_ms.as_millis().min(i32::MAX as u128)) as i32)?;
+        let timeout = i32::try_from(to_ms.as_millis()).unwrap_or(i32::MAX);
+        pcap_set_timeout(&self.pcap_t, timeout)?;
         Ok(self)
     }
 
@@ -345,7 +348,7 @@ impl PcapFilter {
 impl Drop for PcapFilter {
     fn drop(&mut self) {
         tracing::trace!("PcapFilter::drop({:p})", &self.bpf_program);
-        unsafe { luomu_libpcap_sys::pcap_freecode(&mut self.bpf_program) }
+        unsafe { luomu_libpcap_sys::pcap_freecode(&raw mut self.bpf_program) }
     }
 }
 
@@ -356,13 +359,13 @@ pub struct PcapDumper {
 
 impl PcapDumper {
     /// Dump (save) a [Packet] to a savefile.
-    pub fn dump<P: Packet>(&mut self, packet: P) {
-        self.dump_raw(packet.pkthdr(), packet.packet())
+    pub fn dump<P: Packet>(&mut self, packet: &P) {
+        self.dump_raw(packet.pkthdr(), packet.packet());
     }
 
     /// Dump (save) a header and bytes to a savefile.
     pub fn dump_raw(&mut self, pkthdr: &luomu_libpcap_sys::pcap_pkthdr, bytes: &[u8]) {
-        pcap_dump(self, pkthdr, bytes)
+        pcap_dump(self, pkthdr, bytes);
     }
 }
 
@@ -543,6 +546,14 @@ impl PcapIfT {
             }
         }
         None
+    }
+}
+
+impl IntoIterator for &PcapIfT {
+    type Item = Interface;
+    type IntoIter = InterfaceIter;
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 

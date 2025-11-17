@@ -6,10 +6,10 @@ use std::str::FromStr;
 use crate::{InvalidAddress, TagError};
 
 // The MAC address portion of u64
-const MAC_BITS: u64 = 0x0000FFFFFFFFFFFF;
+const MAC_BITS: u64 = 0x0000_FFFF_FFFF_FFFF;
 
 // The VLAN tag portion of u64
-const TAG_BITS: u64 = 0x0FFF000000000000;
+const TAG_BITS: u64 = 0x0FFF_0000_0000_0000;
 
 ///  Address bytes for Ethernet multicast MAC for All Nodes IPv6 multicast.
 const ALL_NODES_MAC: [u8; 6] = [0x33, 0x33, 0x00, 0x00, 0x00, 0x01];
@@ -53,6 +53,7 @@ impl MacAddr {
     pub const BROADCAST: MacAddr = MacAddr(MAC_BITS);
 
     /// Return MAC address as byte array in big endian order.
+    #[allow(clippy::missing_panics_doc)]
     pub fn as_array(&self) -> [u8; 6] {
         // Taking range of [2,7] is safe from u64. See kani proof in bunnies
         // module.
@@ -110,6 +111,7 @@ impl MacAddr {
 
     /// Peek a tag, but don't pop it out.
     pub const fn peek_tag(&self) -> Option<u16> {
+        #[allow(clippy::cast_possible_truncation)]
         match (self.0 >> 48) & 0x0FFF {
             n if n > 0 => Some(n as u16),
             _ => None,
@@ -239,7 +241,7 @@ impl FromStr for MacAddr {
     type Err = InvalidAddress;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        s.splitn(6, ":")
+        s.splitn(6, ':')
             .filter(|s| s.len() == 2)
             .filter(|s| s.chars().all(|c| c.is_ascii_hexdigit()))
             .map(|v| u8::from_str_radix(v, 16).ok())
@@ -268,7 +270,7 @@ impl fmt::Display for MacAddr {
         let h = self
             .as_array()
             .iter()
-            .map(|b| format!("{:02x}", b))
+            .map(|b| format!("{b:02x}"))
             .collect::<Box<[String]>>()
             .join(":");
         f.write_str(&h)

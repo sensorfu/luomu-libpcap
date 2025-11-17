@@ -123,18 +123,18 @@ const fn sa_get_family(sa: *const libc::sockaddr) -> i32 {
 
 /// Returns given [libc::sockaddr] pointer as a pointer to [libc::sockaddr_in]
 const fn sa_as_sockaddr_in(sa: *const libc::sockaddr) -> libc::sockaddr_in {
-    unsafe { *(sa as *const libc::sockaddr_in) }
+    unsafe { *(sa.cast::<libc::sockaddr_in>()) }
 }
 
 /// Returns given [libc::sockaddr] pointer as a pointer to [libc::sockaddr_in6]
 const fn sa_as_sockaddr_in6(sa: *const libc::sockaddr) -> libc::sockaddr_in6 {
-    unsafe { *(sa as *const libc::sockaddr_in6) }
+    unsafe { *(sa.cast::<libc::sockaddr_in6>()) }
 }
 
 #[cfg(target_os = "macos")]
 /// Returns given [libc::sockaddr] pointer as a pointer to [libc::sockaddr_dl]
 const fn sa_as_sockaddr_dl(sa: *const libc::sockaddr) -> libc::sockaddr_dl {
-    unsafe { *(sa as *const libc::sockaddr_dl) }
+    unsafe { *(sa.cast::<libc::sockaddr_dl>()) }
 }
 
 /// This struct provides access to information about network interface.
@@ -162,6 +162,8 @@ impl IfAddr {
     }
 
     /// Interface name
+    // Interface name comes from OS and should be sane (aka ASCII?)
+    #[allow(clippy::missing_panics_doc)]
     pub fn name(&self) -> &str {
         unsafe { CStr::from_ptr(self.ifa().ifa_name) }
             .to_str()
@@ -170,6 +172,7 @@ impl IfAddr {
 
     /// Interface flags
     pub const fn flags(&self) -> Flags {
+        #[allow(clippy::cast_possible_wrap)]
         Flags::from_bits_truncate(self.ifa().ifa_flags as i32)
     }
 
@@ -264,7 +267,7 @@ impl IfAddr {
                 // we need bytes for mac address, thus a bit of unsafery
                 let data = &a.sdl_data;
                 let sdl_data_as_u8: &[u8] =
-                    unsafe { slice::from_raw_parts(data.as_ptr() as *const u8, data.len()) };
+                    unsafe { slice::from_raw_parts(data.as_ptr().cast::<u8>(), data.len()) };
                 let mut address = [0u8; MAC_ADDR_LEN];
                 // mac address stored after name
                 // You may want to look into LLADDR() macro somewhere on Mac OS headers
@@ -275,7 +278,7 @@ impl IfAddr {
             #[cfg(target_os = "linux")]
             libc::AF_PACKET => {
                 // Mac address of the interface
-                let a: libc::sockaddr_ll = unsafe { *(ifa_addr as *const libc::sockaddr_ll) };
+                let a: libc::sockaddr_ll = unsafe { *(ifa_addr.cast::<libc::sockaddr_ll>()) };
                 let a_len = usize::from(a.sll_halen);
                 debug_assert!(a_len == MAC_ADDR_LEN);
                 if a_len != MAC_ADDR_LEN {
