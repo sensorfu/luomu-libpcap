@@ -607,7 +607,7 @@ fn from_sockaddr(addr: *const libc::sockaddr) -> Option<Address> {
         libc::AF_PACKET => {
             let ll_sock: *const libc::sockaddr_ll = addr as *const libc::sockaddr_ll;
             let mut ll_addr = [0u8; 6];
-            ll_addr.copy_from_slice(unsafe { &(*ll_sock).sll_addr[0..6] });
+            ll_addr.copy_from_slice(unsafe { &(&(*ll_sock).sll_addr)[0..6] });
             Some(MacAddr::from(ll_addr).into())
         }
 
