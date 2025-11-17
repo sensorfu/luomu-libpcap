@@ -204,8 +204,7 @@ mod tests {
 
     // 0.0.0.0/32 "This host on this network" [RFC1122], Section 3.2.1.3
     // 0.0.0.0/8 "This network" [RFC791], Section 3.2
-    const V4_THIS_NETWORK: &[Ipv4Addr] =
-        &[Ipv4Addr::new(0, 0, 0, 0), Ipv4Addr::new(0, 255, 255, 255)];
+    const V4_THIS_NETWORK: &[Ipv4Addr] = &[Ipv4Addr::new(0, 0, 0, 0), Ipv4Addr::new(0, 255, 255, 255)];
 
     // 127.0.0.0/8 Loopback [RFC1122] Section 3.2.1.3
     const V4_LOOPBACKS: &[Ipv4Addr] = &[
@@ -253,22 +252,16 @@ mod tests {
     // fe80::/10 Link-Local Unicast [RFC4291]
     const V6_LINK_LOCAL_UNICAST: &[Ipv6Addr] = &[
         Ipv6Addr::new(0xfe80, 0, 0, 0, 0, 0, 0, 0),
-        Ipv6Addr::new(
-            0xfebf, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
-        ),
+        Ipv6Addr::new(0xfebf, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff),
     ];
 
     // 2001:db8::/32 Documentation [RFC3849]
     // 3fff::/20 Documentation [RFC9637]
     const V6_DOCUMENTATION: &[Ipv6Addr] = &[
         Ipv6Addr::new(0x2001, 0x0db8, 0, 0, 0, 0, 0, 0),
-        Ipv6Addr::new(
-            0x2001, 0x0db8, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
-        ),
+        Ipv6Addr::new(0x2001, 0x0db8, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff),
         Ipv6Addr::new(0x3fff, 0, 0, 0, 0, 0, 0, 0),
-        Ipv6Addr::new(
-            0x3fff, 0x0fff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff,
-        ),
+        Ipv6Addr::new(0x3fff, 0x0fff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff),
     ];
 
     fn yield_invalid_source_ip4() -> impl Iterator<Item = Ipv4Addr> {
@@ -306,21 +299,13 @@ mod tests {
     fn yield_invalid_source_ip6() -> impl Iterator<Item = Ipv6Addr> {
         const OTHERS: &[Ipv6Addr] = &[Ipv6Addr::LOCALHOST];
 
-        V6_V4_MAPPED
-            .iter()
-            .chain(V6_DOCUMENTATION)
-            .chain(OTHERS)
-            .cloned()
+        V6_V4_MAPPED.iter().chain(V6_DOCUMENTATION).chain(OTHERS).cloned()
     }
 
     fn yield_invalid_destination_ip6() -> impl Iterator<Item = Ipv6Addr> {
         const OTHERS: &[Ipv6Addr] = &[Ipv6Addr::UNSPECIFIED, Ipv6Addr::LOCALHOST];
 
-        V6_V4_MAPPED
-            .iter()
-            .chain(V6_DOCUMENTATION)
-            .chain(OTHERS)
-            .cloned()
+        V6_V4_MAPPED.iter().chain(V6_DOCUMENTATION).chain(OTHERS).cloned()
     }
 
     fn yield_invalid_forwardable_ip6() -> impl Iterator<Item = Ipv6Addr> {
@@ -471,9 +456,7 @@ mod tests {
 
     #[test]
     fn test_solicited_node_multicast_addr() {
-        let ip = "4047::01:800:200e:8c6c"
-            .parse()
-            .expect("invalid IPv6 address");
+        let ip = "4047::01:800:200e:8c6c".parse().expect("invalid IPv6 address");
         let expected: Ipv6Addr = "ff02::1:ff0e:8c6c".parse().expect("invalid IPv6 address");
         let solicited = solicited_node_multicast_address_for(ip);
         assert!(is_solicited_node_multicast_address(solicited));

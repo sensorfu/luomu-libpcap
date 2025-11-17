@@ -33,8 +33,7 @@ impl<'a> PacketDescriptor<'a> {
     }
 
     pub fn has_vlan_tpid(&self) -> bool {
-        (self.hdr.tp_status & if_packet::TP_STATUS_VLAN_TPID_VALID)
-            == if_packet::TP_STATUS_VLAN_TPID_VALID
+        (self.hdr.tp_status & if_packet::TP_STATUS_VLAN_TPID_VALID) == if_packet::TP_STATUS_VLAN_TPID_VALID
     }
 
     pub fn get_vlan_tci(&self) -> u32 {
@@ -124,11 +123,7 @@ unsafe impl Send for Map {}
 impl Map {
     /// Create new ringbuffer.
     /// Buffer will contain given number of blocks of given size.
-    pub fn create(
-        block_size: u32,
-        block_count: u32,
-        fd: libc::c_int,
-    ) -> Result<Map, std::io::Error> {
+    pub fn create(block_size: u32, block_count: u32, fd: libc::c_int) -> Result<Map, std::io::Error> {
         let size = (block_size * block_count) as libc::size_t;
         let p = unsafe {
             libc::mmap(

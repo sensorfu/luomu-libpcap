@@ -273,10 +273,7 @@ impl PcapBuilder {
     /// capture handle when the handle is activated to to_ms, which is in units of
     /// milliseconds.
     pub fn set_timeout(self, to_ms: Duration) -> Result<PcapBuilder> {
-        pcap_set_timeout(
-            &self.pcap_t,
-            (to_ms.as_millis().min(i32::MAX as u128)) as i32,
-        )?;
+        pcap_set_timeout(&self.pcap_t, (to_ms.as_millis().min(i32::MAX as u128)) as i32)?;
         Ok(self)
     }
 
@@ -298,9 +295,7 @@ impl PcapBuilder {
     /// effect.
     pub fn activate(self) -> Result<Pcap> {
         pcap_activate(&self.pcap_t)?;
-        Ok(Pcap {
-            pcap_t: self.pcap_t,
-        })
+        Ok(Pcap { pcap_t: self.pcap_t })
     }
 }
 

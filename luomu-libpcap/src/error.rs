@@ -67,10 +67,18 @@ impl fmt::Display for Error {
                 "libpcap: Loop terminated by pcap_breakloop (PCAP_ERROR_BREAK)."
             ),
             Error::NotActivated(interface) => {
-                write!(f, "libpcap: Capture handle for interface {} needs to be activated (PCAP_ERROR_NOT_ACTIVATED).", interface)
+                write!(
+                    f,
+                    "libpcap: Capture handle for interface {} needs to be activated (PCAP_ERROR_NOT_ACTIVATED).",
+                    interface
+                )
             }
             Error::AlreadyActivated(interface) => {
-                write!(f, "libpcap: Capture handle for interface {} is already activated (PCAP_ERROR_ACTIVATED).", interface)
+                write!(
+                    f,
+                    "libpcap: Capture handle for interface {} is already activated (PCAP_ERROR_ACTIVATED).",
+                    interface
+                )
             }
             Error::NoSuchDevice(interface) => {
                 write!(
@@ -80,7 +88,11 @@ impl fmt::Display for Error {
                 )
             }
             Error::MonitorModeNotSupported(interface) => {
-                write!(f, "libpcap: Capture interface {} doesn't support monitor mode (PCAP_ERROR_RFMON_NOTSUP).", interface)
+                write!(
+                    f,
+                    "libpcap: Capture interface {} doesn't support monitor mode (PCAP_ERROR_RFMON_NOTSUP).",
+                    interface
+                )
             }
             Error::OnlySupportedInMonitorMode => {
                 write!(
@@ -89,7 +101,11 @@ impl fmt::Display for Error {
                 )
             }
             Error::PermissionDenied(interface) => {
-                write!(f, "libpcap: Process doesn't have permission to open the capture interface {} (PCAP_ERROR_PERM_DENIED).", interface)
+                write!(
+                    f,
+                    "libpcap: Process doesn't have permission to open the capture interface {} (PCAP_ERROR_PERM_DENIED).",
+                    interface
+                )
             }
             Error::InterfaceNotUp(interface) => {
                 write!(
@@ -99,13 +115,24 @@ impl fmt::Display for Error {
                 )
             }
             Error::TimestampTypeNotSupported(interface) => {
-                write!(f, "libpcap: Capture interface {} doesn't support setting the time stamp type (PCAP_ERROR_CANTSET_TSTAMP_TYPE).", interface)
+                write!(
+                    f,
+                    "libpcap: Capture interface {} doesn't support setting the time stamp type (PCAP_ERROR_CANTSET_TSTAMP_TYPE).",
+                    interface
+                )
             }
             Error::PromiscuousPermissionDenied(interface) => {
-                write!(f, "libpcap: Process has permission to open the capture interface {} but doesn't have permission to put it into promiscuous mode (PCAP_ERROR_PROMISC_PERM_DENIED).", interface)
+                write!(
+                    f,
+                    "libpcap: Process has permission to open the capture interface {} but doesn't have permission to put it into promiscuous mode (PCAP_ERROR_PROMISC_PERM_DENIED).",
+                    interface
+                )
             }
             Error::TimestampPrecisionNotSupported => {
-                write!(f, "libcap: Time stamp precision is not supported (PCAP_ERROR_TSTAMP_PRECISION_NOTSUP).")
+                write!(
+                    f,
+                    "libcap: Time stamp precision is not supported (PCAP_ERROR_TSTAMP_PRECISION_NOTSUP)."
+                )
             }
             Error::PcapError(err) => write!(f, "libpcap error: {}", err),
             Error::PcapWarning(warn) => write!(f, "libpcap warning: {}", warn),
@@ -144,9 +171,9 @@ impl From<Error> for io::Error {
             Error::NoSuchDevice(interface) => {
                 io::Error::new(io::ErrorKind::NotFound, format!("{interface} not found"))
             }
-            Error::MonitorModeNotSupported(interface) => io::Error::other(format!(
-                "interface {interface} doesn't support monitor mode"
-            )),
+            Error::MonitorModeNotSupported(interface) => {
+                io::Error::other(format!("interface {interface} doesn't support monitor mode"))
+            }
             Error::PermissionDenied(interface) => io::Error::new(
                 io::ErrorKind::PermissionDenied,
                 format!("could not open {interface}, permission denied"),
@@ -156,9 +183,7 @@ impl From<Error> for io::Error {
             }
             Error::PromiscuousPermissionDenied(interface) => io::Error::new(
                 io::ErrorKind::PermissionDenied,
-                format!(
-                    "could not set interface {interface} to promiscuous mode, permission denied",
-                ),
+                format!("could not set interface {interface} to promiscuous mode, permission denied",),
             ),
             err => io::Error::other(err.to_string()),
         }

@@ -15,7 +15,7 @@
 #![allow(unsafe_code)]
 
 use std::collections::BTreeSet;
-use std::ffi::{c_void, CStr, CString};
+use std::ffi::{CStr, CString, c_void};
 use std::mem::MaybeUninit;
 use std::net::{Ipv4Addr, Ipv6Addr};
 use std::os::fd::AsRawFd;
@@ -25,8 +25,8 @@ use std::time::Duration;
 use log::trace;
 
 use crate::{
-    Address, AddressIter, BorrowedPacket, Errbuf, Error, Interface, InterfaceAddress,
-    InterfaceFlag, MacAddr, PcapDumper, PcapFilter, PcapIfT, PcapStat, PcapT, Result,
+    Address, AddressIter, BorrowedPacket, Errbuf, Error, Interface, InterfaceAddress, InterfaceFlag, MacAddr,
+    PcapDumper, PcapFilter, PcapIfT, PcapStat, PcapT, Result,
 };
 
 use luomu_libpcap_sys as libpcap;
@@ -140,11 +140,7 @@ pub fn pcap_set_snaplen(pcap_t: &PcapT, snaplen: usize) -> Result<()> {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_set_immediate_mode.3pcap.html>
 pub fn pcap_set_immediate_mode(pcap_t: &PcapT, immediate: bool) -> Result<()> {
-    trace!(
-        "pcap_set_immediate_mode({:p}, {})",
-        pcap_t.pcap_t,
-        immediate
-    );
+    trace!("pcap_set_immediate_mode({:p}, {})", pcap_t.pcap_t, immediate);
     let ret = unsafe { libpcap::pcap_set_immediate_mode(pcap_t.pcap_t, immediate.into()) };
     check_pcap_error(pcap_t, ret)
 }
@@ -271,8 +267,7 @@ pub fn pcap_inject(pcap_t: &PcapT, buf: &[u8]) -> Result<usize> {
         buf.as_ptr(),
         buf.len()
     );
-    let ret =
-        unsafe { libpcap::pcap_inject(pcap_t.pcap_t, buf.as_ptr() as *const c_void, buf.len()) };
+    let ret = unsafe { libpcap::pcap_inject(pcap_t.pcap_t, buf.as_ptr() as *const c_void, buf.len()) };
 
     if ret < 0 {
         check_pcap_error(pcap_t, ret)?;
@@ -328,8 +323,7 @@ pub fn pcap_compile(pcap_t: &PcapT, filter: &str) -> Result<PcapFilter> {
 pub fn pcap_setfilter(pcap_t: &PcapT, pcap_filter: &mut PcapFilter) -> Result<()> {
     trace!(
         "pcap_setfilter({:p}, {:p})",
-        pcap_t.pcap_t,
-        &pcap_filter.bpf_program
+        pcap_t.pcap_t, &pcap_filter.bpf_program
     );
 
     let ret = unsafe { libpcap::pcap_setfilter(pcap_t.pcap_t, &mut pcap_filter.bpf_program) };
@@ -469,13 +463,7 @@ pub fn pcap_dump_flush(dumper: &mut PcapDumper) -> Result<()> {
 #[allow(clippy::needless_pass_by_value)]
 pub fn pcap_dump(dumper: &mut PcapDumper, pkthdr: &libpcap::pcap_pkthdr, bytes: &[u8]) {
     trace!("pcap_dump({:p}, {:?})", dumper.pcap_dumper_t, pkthdr);
-    unsafe {
-        libpcap::pcap_dump(
-            dumper.pcap_dumper_t as *mut libc::c_uchar,
-            pkthdr,
-            bytes.as_ptr(),
-        )
-    }
+    unsafe { libpcap::pcap_dump(dumper.pcap_dumper_t as *mut libc::c_uchar, pkthdr, bytes.as_ptr()) }
 }
 
 /// get a list of capture devices
@@ -685,12 +673,7 @@ fn check_pcap_error(pcap_t: &PcapT, ret: i32) -> Result<()> {
             0 => "ok".to_string(),
             n => status_to_str(n).unwrap_or_default(),
         };
-        trace!(
-            "check_pcap_error({:p}, {}) = {}",
-            pcap_t.pcap_t,
-            ret,
-            status
-        );
+        trace!("check_pcap_error({:p}, {}) = {}", pcap_t.pcap_t, ret, status);
     }
 
     match ret {
@@ -700,9 +683,7 @@ fn check_pcap_error(pcap_t: &PcapT, ret: i32) -> Result<()> {
         libpcap::PCAP_ERROR_NOT_ACTIVATED => Err(Error::NotActivated(pcap_t.get_inteface())),
         libpcap::PCAP_ERROR_ACTIVATED => Err(Error::AlreadyActivated(pcap_t.get_inteface())),
         libpcap::PCAP_ERROR_NO_SUCH_DEVICE => Err(Error::NoSuchDevice(pcap_t.get_inteface())),
-        libpcap::PCAP_ERROR_RFMON_NOTSUP => {
-            Err(Error::MonitorModeNotSupported(pcap_t.get_inteface()))
-        }
+        libpcap::PCAP_ERROR_RFMON_NOTSUP => Err(Error::MonitorModeNotSupported(pcap_t.get_inteface())),
         libpcap::PCAP_ERROR_NOT_RFMON => Err(Error::OnlySupportedInMonitorMode),
         libpcap::PCAP_ERROR_PERM_DENIED => Err(Error::PermissionDenied(pcap_t.get_inteface())),
         libpcap::PCAP_ERROR_IFACE_NOT_UP => Err(Error::InterfaceNotUp(pcap_t.get_inteface())),

@@ -5,9 +5,9 @@ mod linux {
 
     use clap::Parser;
     use luomu_tpacketv3 as tpacketv3;
+    use std::sync::Arc;
     use std::sync::atomic::AtomicBool;
     use std::sync::mpsc;
-    use std::sync::Arc;
     use std::thread;
     use std::time::Duration;
 
@@ -36,11 +36,7 @@ mod linux {
         }
     }
 
-    fn packet_producer(
-        mut reader: tpacketv3::Reader<'_>,
-        ch: mpsc::Sender<Vec<u8>>,
-        stop: Arc<AtomicBool>,
-    ) {
+    fn packet_producer(mut reader: tpacketv3::Reader<'_>, ch: mpsc::Sender<Vec<u8>>, stop: Arc<AtomicBool>) {
         let mut false_wakes: u128 = 0;
         let mut wakes: u128 = 0;
         let mut packets: u128 = 0;

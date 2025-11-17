@@ -172,10 +172,8 @@ pub fn reader<'a>(
         mr_alen: 0,
         mr_address: [0; 8],
     };
-    sock.setopt(socket::Option::PacketAddMembership(socket::OptValue {
-        val: mr,
-    }))
-    .map_err(|e| format!("ADD_MEMBERSHIP sockopt failed: {}", e))?;
+    sock.setopt(socket::Option::PacketAddMembership(socket::OptValue { val: mr }))
+        .map_err(|e| format!("ADD_MEMBERSHIP sockopt failed: {}", e))?;
 
     log::trace!("Mapping ring");
     let map = ringbuf::Map::create(parameters.block_size, parameters.block_count, sock.raw_fd())
@@ -196,10 +194,8 @@ pub fn reader<'a>(
 
     if let Some(mode) = parameters.fanout {
         log::trace!("Setting fanout mode {:0X}", mode.arg());
-        sock.setopt(socket::Option::PacketFanout(socket::OptValue {
-            val: mode.arg(),
-        }))
-        .map_err(|e| format!("Could not set fanout mode: {}", e))?;
+        sock.setopt(socket::Option::PacketFanout(socket::OptValue { val: mode.arg() }))
+            .map_err(|e| format!("Could not set fanout mode: {}", e))?;
     }
 
     let mut blocks: Vec<ringbuf::BlockDescriptor<'_>> = Vec::new();

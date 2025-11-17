@@ -77,10 +77,7 @@ fn compile(out_dir: &str, source_dir: &Path) -> io::Result<()> {
         );
     }
 
-    let output = Command::new("make")
-        .current_dir(source_dir)
-        .arg(j_arg)
-        .output()?;
+    let output = Command::new("make").current_dir(source_dir).arg(j_arg).output()?;
     if !output.status.success() {
         panic!(
             "\nSTDOUT:\n{}\n\nSTDERR:\n{}\n",
