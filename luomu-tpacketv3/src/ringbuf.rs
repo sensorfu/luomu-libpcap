@@ -11,7 +11,8 @@ pub struct PacketDescriptor<'a> {
 impl<'a> PacketDescriptor<'a> {
     #[allow(clippy::cast_ptr_alignment)]
     pub fn get_next(self) -> PacketDescriptor<'a> {
-        let next_ptr = unsafe { self.ptr.offset(self.hdr.tp_next_offset as isize) };
+        let next_offset = isize::try_from(self.hdr.tp_next_offset).unwrap_or(isize::MAX);
+        let next_ptr = unsafe { self.ptr.offset(next_offset) };
         let next_hdr_ptr = next_ptr as *const if_packet::tpacket3_hdr;
         PacketDescriptor {
             ptr: next_ptr,
@@ -20,12 +21,14 @@ impl<'a> PacketDescriptor<'a> {
     }
 
     pub fn get_timestamp(&self) -> SystemTime {
-        UNIX_EPOCH + Duration::new(self.hdr.tp_sec as u64, self.hdr.tp_nsec)
+        UNIX_EPOCH + Duration::new(u64::from(self.hdr.tp_sec), self.hdr.tp_nsec)
     }
 
     pub fn get_packet_data(&self) -> &'a [u8] {
-        let data_ptr = unsafe { self.ptr.offset(self.hdr.tp_mac as isize) };
-        unsafe { std::slice::from_raw_parts(data_ptr, self.hdr.tp_snaplen as usize) }
+        let tp_mac = isize::try_from(self.hdr.tp_mac).unwrap_or(isize::MAX);
+        let data_ptr = unsafe { self.ptr.offset(tp_mac) };
+        let snaplen = usize::try_from(self.hdr.tp_snaplen).unwrap_or(usize::MAX);
+        unsafe { std::slice::from_raw_parts(data_ptr, snaplen) }
     }
 
     pub fn has_vlan_tci(&self) -> bool {
@@ -69,7 +72,7 @@ unsafe impl Send for BlockDescriptor<'_> {}
 
 impl<'a> BlockDescriptor<'a> {
     pub fn flush(&mut self) {
-        self.desc.hdr.block_status = if_packet::TP_STATUS_KERNEL
+        self.desc.hdr.block_status = if_packet::TP_STATUS_KERNEL;
     }
 
     pub fn is_ready(&self) -> bool {
@@ -81,14 +84,15 @@ impl<'a> BlockDescriptor<'a> {
     }
 
     pub fn get_first_packet(&self) -> PacketDescriptor<'a> {
-        unsafe { self.ptr.offset(self.desc.hdr.offset_to_first_pkt as isize) }.into()
+        let offset = isize::try_from(self.desc.hdr.offset_to_first_pkt).unwrap_or(isize::MAX);
+        unsafe { self.ptr.offset(offset) }.into()
     }
 }
 
 impl From<*mut u8> for BlockDescriptor<'_> {
     #[allow(clippy::cast_ptr_alignment)]
     fn from(ptr: *mut u8) -> Self {
-        let desc_ptr = ptr as *mut if_packet::tpacket_block_desc;
+        let desc_ptr = ptr.cast::<if_packet::tpacket_block_desc>();
 
         BlockDescriptor {
             ptr,
@@ -111,9 +115,11 @@ impl fmt::Display for BlockDescriptor<'_> {
 
 /// mmapped ringbuffer. Contains blocks of packet data, each block will be filled
 /// with packets by the kernel
+#[allow(clippy::struct_field_names)]
 pub struct Map {
     ptr: *mut libc::c_void,
     map_size: libc::size_t,
+    #[allow(dead_code)]
     block_size: u32,
     block_count: u32,
 }
@@ -124,7 +130,8 @@ impl Map {
     /// Create new ringbuffer.
     /// Buffer will contain given number of blocks of given size.
     pub fn create(block_size: u32, block_count: u32, fd: libc::c_int) -> Result<Map, std::io::Error> {
-        let size = (block_size * block_count) as libc::size_t;
+        let size = usize::try_from(block_size).unwrap_or(usize::MAX)
+            * usize::try_from(block_count).unwrap_or(usize::MAX);
         let p = unsafe {
             libc::mmap(
                 std::ptr::null_mut(),
@@ -148,15 +155,15 @@ impl Map {
 
     /// get pointer for descriptor block with given index.
     pub fn get_descriptor_ptr_for(&self, index: isize) -> *mut u8 {
-        if index >= self.block_count as isize {
-            panic!(
-                "Trying to read block {}, but only {} blocks available",
-                index, self.block_count
-            );
-        }
+        assert!(
+            index < isize::try_from(self.block_count).unwrap_or(isize::MAX),
+            "Trying to read block {index}, but only {} blocks available",
+            self.block_count
+        );
         let my_ptr = self.ptr;
-        let buf_ptr = my_ptr as *mut u8;
-        let offset = index * self.block_size as isize;
+        let buf_ptr = my_ptr.cast::<u8>();
+        let block_size = isize::try_from(self.block_count).unwrap_or(isize::MAX);
+        let offset = index * block_size;
         unsafe { buf_ptr.offset(offset) }
     }
 }

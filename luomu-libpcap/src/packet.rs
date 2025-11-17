@@ -46,7 +46,9 @@ pub struct OwnedPacket {
 impl Packet for OwnedPacket {
     fn timestamp(&self) -> SystemTime {
         let ts: libc::timeval = self.header.ts;
-        UNIX_EPOCH + Duration::new(ts.tv_sec as u64, (ts.tv_usec as u32) * 1000)
+        let secs: u64 = u64::try_from(ts.tv_sec).unwrap_or_default();
+        let usecs: u32 = u32::try_from(ts.tv_usec).unwrap_or_default();
+        UNIX_EPOCH + Duration::new(secs, usecs * 1000)
     }
 
     fn packet(&self) -> &[u8] {
@@ -105,7 +107,9 @@ impl BorrowedPacket {
 impl Packet for BorrowedPacket {
     fn timestamp(&self) -> SystemTime {
         let ts: libc::timeval = unsafe { (*self.pkthdr).ts };
-        UNIX_EPOCH + Duration::new(ts.tv_sec as u64, (ts.tv_usec as u32) * 1000)
+        let secs: u64 = u64::try_from(ts.tv_sec).unwrap_or_default();
+        let usecs: u32 = u32::try_from(ts.tv_usec).unwrap_or_default();
+        UNIX_EPOCH + Duration::new(secs, usecs * 1000)
     }
 
     fn packet(&self) -> &[u8] {

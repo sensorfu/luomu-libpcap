@@ -15,10 +15,10 @@ fn main() -> io::Result<()> {
     let source_dir = unpack_libpcap(&out_dir)?;
     compile(&out_dir, &source_dir)?;
 
-    let libdir = format!("{}/lib", out_dir);
+    let libdir = format!("{out_dir}/lib");
 
     println!("cargo:rustc-link-lib=static=pcap");
-    println!("cargo:rustc-link-search=native={}", libdir);
+    println!("cargo:rustc-link-search=native={libdir}");
 
     Ok(())
 }
@@ -54,11 +54,10 @@ fn compile(out_dir: &str, source_dir: &Path) -> io::Result<()> {
 
     let compiler = cc::Build::new().get_compiler();
     let cc = compiler.path().to_string_lossy();
-    // panic!("cc = {}", cc);
 
     let output = Command::new(source_dir.join("configure"))
         .current_dir(source_dir)
-        .arg(format!("CC={}", cc))
+        .arg(format!("CC={cc}"))
         .arg("--prefix")
         .arg(out_dir)
         .arg("--disable-universal")
@@ -69,22 +68,22 @@ fn compile(out_dir: &str, source_dir: &Path) -> io::Result<()> {
         .arg(target_arg)
         .arg(host_arg)
         .output()?;
-    if !output.status.success() {
-        panic!(
-            "\nSTDOUT:\n{}\n\nSTDERR:\n{}\n",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
+
+    assert!(
+        output.status.success(),
+        "\nSTDOUT:\n{}\n\nSTDERR:\n{}\n",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
 
     let output = Command::new("make").current_dir(source_dir).arg(j_arg).output()?;
-    if !output.status.success() {
-        panic!(
-            "\nSTDOUT:\n{}\n\nSTDERR:\n{}\n",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
+
+    assert!(
+        output.status.success(),
+        "\nSTDOUT:\n{}\n\nSTDERR:\n{}\n",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
 
     Command::new("make")
         .current_dir(source_dir)

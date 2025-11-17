@@ -20,6 +20,7 @@ pub trait AddrPair<ADDR> {
     fn destination(&self) -> Destination<ADDR>;
 
     /// Return new address pair with source and destination addresses flipped.
+    #[must_use]
     fn flip(&self) -> Self;
 }
 
@@ -58,10 +59,7 @@ impl AddrPair<IpAddr> for IPPair {
         match (src.into_inner(), dst.into_inner()) {
             (IpAddr::V4(src), IpAddr::V4(dst)) => IPPair::new_v4(Source::new(src), Destination::new(dst)),
             (IpAddr::V6(src), IpAddr::V6(dst)) => IPPair::new_v6(Source::new(src), Destination::new(dst)),
-            _ => panic!(
-                "IPPair::new() invalid IP address families provided. src: {:?}, dst: {:?}",
-                src, dst
-            ),
+            _ => panic!("IPPair::new() invalid IP address families provided. src: {src:?}, dst: {dst:?}"),
         }
     }
 

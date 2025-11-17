@@ -89,8 +89,7 @@ pub fn pcap_open_offline<P: AsRef<Path>>(savefile: P) -> Result<PcapT> {
 /// <https://www.tcpdump.org/manpages/pcap_close.3pcap.html>
 pub fn pcap_close(pcap_t: PcapT) {
     tracing::trace!("pcap_close({:p})", pcap_t.pcap_t);
-    // PcapT is owned by this function and dropped at this point since it's no
-    // longer needed. Dropping frees the allocated resources.
+    drop(pcap_t);
 }
 
 /// set the buffer size for a not-yet-activated capture handle
@@ -101,8 +100,9 @@ pub fn pcap_close(pcap_t: PcapT) {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_set_buffer_size.3pcap.html>
 pub fn pcap_set_buffer_size(pcap_t: &PcapT, buffer_size: usize) -> Result<()> {
-    tracing::trace!("pcap_set_buffer_size({:p}, {buffer_size})", pcap_t.pcap_t);
-    let ret = unsafe { libpcap::pcap_set_buffer_size(pcap_t.pcap_t, buffer_size as libc::c_int) };
+    tracing::trace!("pcap_set_buffer_size({:p}, {})", pcap_t.pcap_t, buffer_size);
+    let buffer_size = libc::c_int::try_from(buffer_size).unwrap_or(libc::c_int::MAX);
+    let ret = unsafe { libpcap::pcap_set_buffer_size(pcap_t.pcap_t, buffer_size) };
     check_pcap_error(pcap_t, ret)
 }
 
@@ -125,8 +125,9 @@ pub fn pcap_set_promisc(pcap_t: &PcapT, promiscuous: bool) -> Result<()> {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_set_snaplen.3pcap.html>
 pub fn pcap_set_snaplen(pcap_t: &PcapT, snaplen: usize) -> Result<()> {
-    tracing::trace!("pcap_set_snaplen({:p}, {snaplen})", pcap_t.pcap_t);
-    let ret = unsafe { libpcap::pcap_set_snaplen(pcap_t.pcap_t, snaplen as libc::c_int) };
+    tracing::trace!("pcap_set_snaplen({:p}, {})", pcap_t.pcap_t, snaplen);
+    let snaplen = libc::c_int::try_from(snaplen).unwrap_or(libc::c_int::MAX);
+    let ret = unsafe { libpcap::pcap_set_snaplen(pcap_t.pcap_t, snaplen) };
     check_pcap_error(pcap_t, ret)
 }
 
@@ -162,10 +163,7 @@ pub fn pcap_set_timeout(pcap_t: &PcapT, to_ms: i32) -> Result<()> {
 pub fn pcap_set_nonblock(pcap_t: &PcapT, nonblock: bool) -> Result<()> {
     let mut errbuf = Errbuf::new();
 
-    let arg: libc::c_int = match nonblock {
-        true => 1,
-        false => 0,
-    };
+    let arg = libc::c_int::from(nonblock);
 
     let ret = unsafe { libpcap::pcap_setnonblock(pcap_t.pcap_t, arg, errbuf.as_mut_ptr()) };
     match ret {
@@ -193,9 +191,9 @@ pub fn pcap_get_required_select_timeout(pcap_t: &PcapT) -> Option<Duration> {
     if tv.is_null() {
         None
     } else {
-        Some(Duration::from_micros(unsafe {
-            (*tv).tv_sec as u64 * 1_000_000 + (*tv).tv_usec as u64
-        }))
+        let secs: u64 = u64::try_from(unsafe { (*tv).tv_sec }).unwrap_or_default();
+        let usecs: u32 = u32::try_from(unsafe { (*tv).tv_usec }).unwrap_or_default();
+        Some(Duration::new(secs, usecs * 1000))
     }
 }
 
@@ -246,7 +244,7 @@ pub fn get_error(pcap_t: &PcapT) -> Result<Error> {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_stats.3pcap.html>
 pub fn pcap_stats(pcap_t: &PcapT, stat: &mut PcapStat) -> Result<()> {
-    let ret = unsafe { libpcap::pcap_stats(pcap_t.pcap_t, &mut stat.stats) };
+    let ret = unsafe { libpcap::pcap_stats(pcap_t.pcap_t, &raw mut stat.stats) };
     check_pcap_error(pcap_t, ret)
 }
 
@@ -262,13 +260,13 @@ pub fn pcap_inject(pcap_t: &PcapT, buf: &[u8]) -> Result<usize> {
     let ptr = buf.as_ptr();
     let len = buf.len();
     tracing::trace!("pcap_inject({:p}, {ptr:?}, {len})", pcap_t.pcap_t,);
-    let ret = unsafe { libpcap::pcap_inject(pcap_t.pcap_t, ptr as *const c_void, len) };
+    let ret = unsafe { libpcap::pcap_inject(pcap_t.pcap_t, ptr.cast::<c_void>(), len) };
 
     if ret < 0 {
         check_pcap_error(pcap_t, ret)?;
     }
 
-    Ok(ret as usize)
+    Ok(usize::try_from(ret).unwrap_or_default())
 }
 
 /// compile a filter expression
@@ -322,7 +320,7 @@ pub fn pcap_setfilter(pcap_t: &PcapT, pcap_filter: &mut PcapFilter) -> Result<()
         &pcap_filter.bpf_program
     );
 
-    let ret = unsafe { libpcap::pcap_setfilter(pcap_t.pcap_t, &mut pcap_filter.bpf_program) };
+    let ret = unsafe { libpcap::pcap_setfilter(pcap_t.pcap_t, &raw mut pcap_filter.bpf_program) };
     check_pcap_error(pcap_t, ret)
 }
 
@@ -336,8 +334,7 @@ pub fn pcap_setfilter(pcap_t: &PcapT, pcap_filter: &mut PcapFilter) -> Result<()
 /// <https://www.tcpdump.org/manpages/pcap_freecode.3pcap.html>
 pub fn pcap_freecode(pcap_filter: PcapFilter) {
     tracing::trace!("pcap_freecode({:p})", &pcap_filter.bpf_program);
-    // PcapFilter is owned by this function and dropped at this point since it's
-    // no longer needed. Dropping frees the allocated resources.
+    drop(pcap_filter);
 }
 
 /// read the next packet from a `PcapT`
@@ -345,12 +342,16 @@ pub fn pcap_freecode(pcap_filter: PcapFilter) {
 /// If data is needed, copy it before calling this again.
 ///
 /// <https://www.tcpdump.org/manpages/pcap_next_ex.3pcap.html>
+///
+/// # Panics
+///
+/// This function will panic if libpcap returns invalid pointers.
 pub fn pcap_next_ex(pcap_t: &PcapT) -> Result<BorrowedPacket> {
     tracing::trace!("pcap_next_ex({:p})", pcap_t.pcap_t);
     let mut header: *mut libpcap::pcap_pkthdr = std::ptr::null_mut();
     let mut packet: *const libc::c_uchar = std::ptr::null();
 
-    let ret = unsafe { libpcap::pcap_next_ex(pcap_t.pcap_t, &mut header, &mut packet) };
+    let ret = unsafe { libpcap::pcap_next_ex(pcap_t.pcap_t, &raw mut header, &raw mut packet) };
 
     // pcap_next_ex() returns 1 if the packet was read without problems, 0 if
     // packets are being read from a live capture and the packet buffer timeout
@@ -361,9 +362,7 @@ pub fn pcap_next_ex(pcap_t: &PcapT) -> Result<BorrowedPacket> {
         n => check_pcap_error(pcap_t, n)?,
     }
 
-    if header.is_null() || packet.is_null() {
-        panic!("header or packet NULL.");
-    }
+    assert!(!header.is_null() && !packet.is_null(), "header or packet NULL.");
 
     Ok(BorrowedPacket::new(header, packet))
 }
@@ -379,6 +378,7 @@ pub fn pcap_next_ex(pcap_t: &PcapT) -> Result<BorrowedPacket> {
 ///
 /// <https://www.tcpdump.org/manpages/pcap_open_dead.3pcap.html>
 pub fn pcap_open_dead() -> Result<PcapT> {
+    #[allow(clippy::cast_possible_wrap)]
     let pcap_t = unsafe { libpcap::pcap_open_dead(libpcap::DLT_EN10MB as libc::c_int, 65535) };
 
     // pcap_open_dead return value is not documented.
@@ -407,7 +407,7 @@ pub fn pcap_dump_fopen(pcap_t: &PcapT, file: &mut std::fs::File) -> Result<PcapD
     tracing::trace!("pcap_dump_fopen({:p}, {file:?})", pcap_t.pcap_t);
     let mode = b"wb\0";
 
-    let filedesc = unsafe { libc::fdopen(file.as_raw_fd(), mode.as_ptr() as *const libc::c_char) };
+    let filedesc = unsafe { libc::fdopen(file.as_raw_fd(), mode.as_ptr().cast::<libc::c_char>()) };
     if filedesc.is_null() {
         return Err(Error::IO(std::io::Error::last_os_error()));
     }
@@ -458,8 +458,14 @@ pub fn pcap_dump_flush(dumper: &mut PcapDumper) -> Result<()> {
 // because we write into a file pointed by `PcapDumper`.
 #[allow(clippy::needless_pass_by_value)]
 pub fn pcap_dump(dumper: &mut PcapDumper, pkthdr: &libpcap::pcap_pkthdr, bytes: &[u8]) {
-    tracing::trace!("pcap_dump({:p}, {pkthdr:?})", dumper.pcap_dumper_t);
-    unsafe { libpcap::pcap_dump(dumper.pcap_dumper_t as *mut libc::c_uchar, pkthdr, bytes.as_ptr()) }
+    tracing::trace!("pcap_dump({:p}, {:?})", dumper.pcap_dumper_t, pkthdr);
+    unsafe {
+        libpcap::pcap_dump(
+            dumper.pcap_dumper_t.cast::<libc::c_uchar>(),
+            pkthdr,
+            bytes.as_ptr(),
+        );
+    }
 }
 
 /// get a list of capture devices
@@ -476,7 +482,7 @@ pub fn pcap_findalldevs() -> Result<PcapIfT> {
     let mut pcap_if_t: *mut libpcap::pcap_if_t = std::ptr::null_mut();
     let mut errbuf = Errbuf::new();
 
-    let ret = unsafe { libpcap::pcap_findalldevs(&mut pcap_if_t, errbuf.as_mut_ptr()) };
+    let ret = unsafe { libpcap::pcap_findalldevs(&raw mut pcap_if_t, errbuf.as_mut_ptr()) };
 
     match ret {
         PCAP_SUCCESS => {
@@ -495,8 +501,7 @@ pub fn pcap_findalldevs() -> Result<PcapIfT> {
 /// <https://www.tcpdump.org/manpages/pcap_findalldevs.3pcap.html>
 pub fn pcap_freealldevs(pcap_if_t: PcapIfT) {
     tracing::trace!("pcap_freealldevs({:p})", pcap_if_t.pcap_if_t);
-    // PcapIfT is owned by this function and dropped at this point since it's no
-    // longer needed. Dropping frees the allocated resources.
+    drop(pcap_if_t);
 }
 
 pub(crate) fn try_interface_from(pcap_if_t: *mut libpcap::pcap_if_t) -> Result<Interface> {
@@ -559,37 +564,30 @@ fn from_sockaddr(addr: *const libc::sockaddr) -> Option<Address> {
 
     match i32::from(family) {
         libc::AF_INET => {
-            let inet4: *const libc::sockaddr_in = addr as *const libc::sockaddr_in;
+            let inet4: *const libc::sockaddr_in = addr.cast::<libc::sockaddr_in>();
             let s_addr: u32 = unsafe { (*inet4).sin_addr.s_addr };
             Some(Ipv4Addr::from(u32::from_be(s_addr)).into())
         }
 
         libc::AF_INET6 => {
-            let inet6: *const libc::sockaddr_in6 = addr as *const libc::sockaddr_in6;
+            let inet6: *const libc::sockaddr_in6 = addr.cast::<libc::sockaddr_in6>();
             let s6_addr: [u8; 16] = unsafe { (*inet6).sin6_addr.s6_addr };
             Some(Ipv6Addr::from(s6_addr).into())
         }
 
         #[cfg(target_os = "macos")]
         libc::AF_LINK => {
-            let dl_sock: *const libc::sockaddr_dl = addr as *const libc::sockaddr_dl;
+            let dl_sock: *const libc::sockaddr_dl = addr.cast::<libc::sockaddr_dl>();
             let start = unsafe { (*dl_sock).sdl_nlen } as usize;
-            let dl_addr: [u8; 6] = unsafe {
-                [
-                    *(*dl_sock).sdl_data.get(start)? as u8,
-                    *(*dl_sock).sdl_data.get(start + 1)? as u8,
-                    *(*dl_sock).sdl_data.get(start + 2)? as u8,
-                    *(*dl_sock).sdl_data.get(start + 3)? as u8,
-                    *(*dl_sock).sdl_data.get(start + 4)? as u8,
-                    *(*dl_sock).sdl_data.get(start + 5)? as u8,
-                ]
-            };
+            let dl_addr: [i8; 6] =
+                TryFrom::try_from(unsafe { (*dl_sock).sdl_data.get(start..=start + 5)? }).ok()?;
+            let dl_addr: [u8; 6] = unsafe { std::mem::transmute(dl_addr) };
             Some(MacAddr::from(dl_addr).into())
         }
 
         #[cfg(target_os = "linux")]
         libc::AF_PACKET => {
-            let ll_sock: *const libc::sockaddr_ll = addr as *const libc::sockaddr_ll;
+            let ll_sock: *const libc::sockaddr_ll = addr.cast::<libc::sockaddr_ll>();
             let mut ll_addr = [0u8; 6];
             ll_addr.copy_from_slice(unsafe { &(&(*ll_sock).sll_addr)[0..6] });
             Some(MacAddr::from(ll_addr).into())
@@ -606,22 +604,22 @@ pub(crate) fn try_address_from(pcap_addr_t: *mut libpcap::pcap_addr_t) -> Option
     tracing::trace!("try_address_from({pcap_addr_t:p})");
     debug_assert!(!pcap_addr_t.is_null(), "null pointer");
     let addr = {
-        let addr = unsafe { (*pcap_addr_t).addr as *const libc::sockaddr };
+        let addr = unsafe { (*pcap_addr_t).addr.cast_const() };
         from_sockaddr(addr)?
     };
 
     let netmask = {
-        let addr = unsafe { (*pcap_addr_t).netmask as *const libc::sockaddr };
+        let addr = unsafe { (*pcap_addr_t).netmask.cast_const() };
         from_sockaddr(addr)
     };
 
     let broadaddr = {
-        let addr = unsafe { (*pcap_addr_t).broadaddr as *const libc::sockaddr };
+        let addr = unsafe { (*pcap_addr_t).broadaddr.cast_const() };
         from_sockaddr(addr)
     };
 
     let dstaddr = {
-        let addr = unsafe { (*pcap_addr_t).dstaddr as *const libc::sockaddr };
+        let addr = unsafe { (*pcap_addr_t).dstaddr.cast_const() };
         from_sockaddr(addr)
     };
 
@@ -636,7 +634,6 @@ pub(crate) fn try_address_from(pcap_addr_t: *mut libpcap::pcap_addr_t) -> Option
 fn get_interface_flags(val: u32) -> BTreeSet<InterfaceFlag> {
     tracing::trace!("get_interface_flags({val})");
     let mut flags = BTreeSet::new();
-    use InterfaceFlag::*;
     for flag in &[
         libpcap::PCAP_IF_LOOPBACK,
         libpcap::PCAP_IF_UP,
@@ -644,10 +641,10 @@ fn get_interface_flags(val: u32) -> BTreeSet<InterfaceFlag> {
     ] {
         if (val & flag) > 0 {
             match *flag {
-                libpcap::PCAP_IF_LOOPBACK => flags.insert(Loopback),
-                libpcap::PCAP_IF_UP => flags.insert(Up),
-                libpcap::PCAP_IF_RUNNING => flags.insert(Running),
-                _ => panic!("Unsupported InterfaceFlag field: {:b}", flag),
+                libpcap::PCAP_IF_LOOPBACK => flags.insert(InterfaceFlag::Loopback),
+                libpcap::PCAP_IF_UP => flags.insert(InterfaceFlag::Up),
+                libpcap::PCAP_IF_RUNNING => flags.insert(InterfaceFlag::Running),
+                _ => panic!("Unsupported InterfaceFlag field: {flag:b}"),
             };
         }
     }
@@ -704,7 +701,8 @@ pub fn poll_fd_in(fd: i32, timeout: Duration) -> std::io::Result<bool> {
         revents: 0,
     };
 
-    let ret = unsafe { libc::poll(&mut pfd, 1, timeout.as_millis() as i32) };
+    let timeout = libc::c_int::try_from(timeout.as_millis()).unwrap_or(libc::c_int::MAX);
+    let ret = unsafe { libc::poll(&raw mut pfd, 1, timeout) };
     match ret {
         0 => Ok(false),
         -1 => Err(std::io::Error::last_os_error()),

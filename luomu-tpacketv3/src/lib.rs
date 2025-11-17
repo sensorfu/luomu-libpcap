@@ -35,7 +35,7 @@ pub enum FanoutMode {
 
 impl FanoutMode {
     // Get the actual numeric code for this fanout mode
-    fn val(&self) -> libc::c_int {
+    fn val(self) -> libc::c_int {
         match self {
             FanoutMode::HASH(_) => if_packet::PACKET_FANOUT_HASH,
             FanoutMode::LB(_) => if_packet::PACKET_FANOUT_LB,
@@ -48,19 +48,19 @@ impl FanoutMode {
         }
     }
 
-    fn arg(&self) -> i32 {
+    fn arg(self) -> i32 {
         let group_id = match self {
-            FanoutMode::HASH(v) => v,
-            FanoutMode::LB(v) => v,
-            FanoutMode::ROLLOVER(v) => v,
-            FanoutMode::RND(v) => v,
-            FanoutMode::QM(v) => v,
-            FanoutMode::CBPF(v) => v,
-            FanoutMode::EBPF(v) => v,
-            FanoutMode::CPU(v) => v,
+            FanoutMode::HASH(v)
+            | FanoutMode::LB(v)
+            | FanoutMode::ROLLOVER(v)
+            | FanoutMode::RND(v)
+            | FanoutMode::QM(v)
+            | FanoutMode::CBPF(v)
+            | FanoutMode::EBPF(v)
+            | FanoutMode::CPU(v) => v,
         };
 
-        *group_id as i32 | (self.val() << 16)
+        i32::from(group_id) | (self.val() << 16)
     }
 }
 
@@ -128,12 +128,12 @@ pub fn reader<'a>(
     parameters: ReaderParameters,
 ) -> Result<Reader<'a>, String> {
     let index = ifindex_for(interface);
-    let sock = socket::Fd::create().map_err(|e| format!("Can not create socket {}", e))?;
+    let sock = socket::Fd::create().map_err(|e| format!("Can not create socket {e}"))?;
     tracing::trace!("Index for interface {interface} is {index}");
 
     // try to compile the filter, if one is set, first
     let filter = match pcap_filter {
-        Some(f) => Some(PcapFilter::compile(f).map_err(|e| format!("Invalid pcap filter: {}", e))?),
+        Some(f) => Some(PcapFilter::compile(f).map_err(|e| format!("Invalid pcap filter: {e}"))?),
         None => None,
     };
 
@@ -142,8 +142,8 @@ pub fn reader<'a>(
         val: if_packet::TPACKET_V3,
     };
     tracing::trace!("Setting packet version");
-    sock.setopt(socket::Option::PacketVersion(opt))
-        .map_err(|e| format!("packet version sockopt failed: {}", e))?;
+    sock.setopt(&socket::Option::PacketVersion(opt))
+        .map_err(|e| format!("packet version sockopt failed: {e}"))?;
 
     let req = if_packet::tpacket_req3 {
         tp_block_size: parameters.block_size,
@@ -156,51 +156,57 @@ pub fn reader<'a>(
     };
 
     tracing::trace!("setting RX_PACKET request");
-    sock.setopt(socket::Option::PacketRxRing(socket::OptValue { val: req }))
-        .map_err(|e| format!("RX_RING sockopt failed: {}", e))?;
+    sock.setopt(&socket::Option::PacketRxRing(socket::OptValue { val: req }))
+        .map_err(|e| format!("RX_RING sockopt failed: {e}"))?;
 
     if let Some(f) = filter {
         tracing::trace!("setting filter");
-        sock.set_filter(f)
-            .map_err(|e| format!("Can not set filter: {}", e))?;
+        sock.set_filter(&f)
+            .map_err(|e| format!("Can not set filter: {e}"))?;
     }
 
     tracing::trace!("Setting PROMISC mode");
     let mr = libc::packet_mreq {
-        mr_ifindex: index as libc::c_int,
+        mr_ifindex: libc::c_int::try_from(index).unwrap_or(libc::c_int::MAX),
+        #[allow(clippy::cast_possible_truncation)]
         mr_type: libc::PACKET_MR_PROMISC as u16,
         mr_alen: 0,
         mr_address: [0; 8],
     };
-    sock.setopt(socket::Option::PacketAddMembership(socket::OptValue { val: mr }))
-        .map_err(|e| format!("ADD_MEMBERSHIP sockopt failed: {}", e))?;
+    sock.setopt(&socket::Option::PacketAddMembership(socket::OptValue { val: mr }))
+        .map_err(|e| format!("ADD_MEMBERSHIP sockopt failed: {e}"))?;
 
     tracing::trace!("Mapping ring");
     let map = ringbuf::Map::create(parameters.block_size, parameters.block_count, sock.raw_fd())
-        .map_err(|e| format!("Can not mmap for ringbuffer: {}", e))?;
+        .map_err(|e| format!("Can not mmap for ringbuffer: {e}"))?;
 
     tracing::trace!("binding to interface");
     let ll = libc::sockaddr_ll {
+        #[allow(clippy::cast_possible_truncation)]
         sll_family: libc::AF_PACKET as u16,
+        #[allow(clippy::cast_possible_truncation)]
         sll_protocol: socket::htons(libc::ETH_P_ALL as u16),
-        sll_ifindex: index as i32,
+        sll_ifindex: i32::try_from(index).unwrap_or(i32::MAX),
         sll_hatype: 0, // the rest of the struct is not used when binding according to man packet(7)
         sll_pkttype: 0, // but we need to fill them to keep compiler happy
         sll_halen: 0,
         sll_addr: [0; 8],
     };
     sock.bind(&ll)
-        .map_err(|e| format!("Can not bind socket to interface: {}", e))?;
+        .map_err(|e| format!("Can not bind socket to interface: {e}"))?;
 
     if let Some(mode) = parameters.fanout {
         tracing::trace!("Setting fanout mode {:0X}", mode.arg());
-        sock.setopt(socket::Option::PacketFanout(socket::OptValue { val: mode.arg() }))
-            .map_err(|e| format!("Could not set fanout mode: {}", e))?;
+        sock.setopt(&socket::Option::PacketFanout(socket::OptValue {
+            val: mode.arg(),
+        }))
+        .map_err(|e| format!("Could not set fanout mode: {e}"))?;
     }
 
     let mut blocks: Vec<ringbuf::BlockDescriptor<'_>> = Vec::new();
     for i in 0..parameters.block_count {
-        blocks.push(map.get_descriptor_ptr_for(i as isize).into());
+        let i = isize::try_from(i).unwrap_or(isize::MAX);
+        blocks.push(map.get_descriptor_ptr_for(i).into());
     }
     Ok(Reader {
         map,
@@ -229,7 +235,7 @@ impl fmt::Display for WaitError {
         match self {
             WaitError::Timeout => write!(f, "Timed out waiting for block"),
             WaitError::BlockNotReady => write!(f, "Block not ready"),
-            WaitError::IoError(e) => write!(f, "Error while polling: {}", e),
+            WaitError::IoError(e) => write!(f, "Error while polling: {e}"),
         }
     }
 }
@@ -265,7 +271,7 @@ impl<'a> Reader<'a> {
             .getopt(socket::Option::PacketStatistics(socket::OptValue {
                 val: t_stats,
             }))
-            .map_err(|e| format!("PACKET_STATISTICS failed: {}", e))?;
+            .map_err(|e| format!("PACKET_STATISTICS failed: {e}"))?;
 
         Ok((ret.tp_packets, ret.tp_drops))
     }
@@ -361,7 +367,6 @@ pub struct PacketIter<'a> {
     pkt: Option<ringbuf::PacketDescriptor<'a>>,
     count: u32,
     index: u32,
-    // block: &'a mut ringbuf::BlockDescriptor<'a>,
 }
 
 impl<'a> Iterator for PacketIter<'a> {

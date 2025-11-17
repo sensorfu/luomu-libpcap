@@ -69,29 +69,25 @@ impl fmt::Display for Error {
             Error::NotActivated(interface) => {
                 write!(
                     f,
-                    "libpcap: Capture handle for interface {} needs to be activated (PCAP_ERROR_NOT_ACTIVATED).",
-                    interface
+                    "libpcap: Capture handle for interface {interface} needs to be activated (PCAP_ERROR_NOT_ACTIVATED)."
                 )
             }
             Error::AlreadyActivated(interface) => {
                 write!(
                     f,
-                    "libpcap: Capture handle for interface {} is already activated (PCAP_ERROR_ACTIVATED).",
-                    interface
+                    "libpcap: Capture handle for interface {interface} is already activated (PCAP_ERROR_ACTIVATED)."
                 )
             }
             Error::NoSuchDevice(interface) => {
                 write!(
                     f,
-                    "libpcap: Capture interface {} doesn't exist (PCAP_ERROR_NO_SUCH_DEVICE).",
-                    interface
+                    "libpcap: Capture interface {interface} doesn't exist (PCAP_ERROR_NO_SUCH_DEVICE)."
                 )
             }
             Error::MonitorModeNotSupported(interface) => {
                 write!(
                     f,
-                    "libpcap: Capture interface {} doesn't support monitor mode (PCAP_ERROR_RFMON_NOTSUP).",
-                    interface
+                    "libpcap: Capture interface {interface} doesn't support monitor mode (PCAP_ERROR_RFMON_NOTSUP).",
                 )
             }
             Error::OnlySupportedInMonitorMode => {
@@ -103,29 +99,25 @@ impl fmt::Display for Error {
             Error::PermissionDenied(interface) => {
                 write!(
                     f,
-                    "libpcap: Process doesn't have permission to open the capture interface {} (PCAP_ERROR_PERM_DENIED).",
-                    interface
+                    "libpcap: Process doesn't have permission to open the capture interface {interface} (PCAP_ERROR_PERM_DENIED)."
                 )
             }
             Error::InterfaceNotUp(interface) => {
                 write!(
                     f,
-                    "libpcap: Capture interface {} is not up (PCAP_ERROR_IFACE_NOT_UP).",
-                    interface
+                    "libpcap: Capture interface {interface} is not up (PCAP_ERROR_IFACE_NOT_UP)."
                 )
             }
             Error::TimestampTypeNotSupported(interface) => {
                 write!(
                     f,
-                    "libpcap: Capture interface {} doesn't support setting the time stamp type (PCAP_ERROR_CANTSET_TSTAMP_TYPE).",
-                    interface
+                    "libpcap: Capture interface {interface} doesn't support setting the time stamp type (PCAP_ERROR_CANTSET_TSTAMP_TYPE)."
                 )
             }
             Error::PromiscuousPermissionDenied(interface) => {
                 write!(
                     f,
-                    "libpcap: Process has permission to open the capture interface {} but doesn't have permission to put it into promiscuous mode (PCAP_ERROR_PROMISC_PERM_DENIED).",
-                    interface
+                    "libpcap: Process has permission to open the capture interface {interface} but doesn't have permission to put it into promiscuous mode (PCAP_ERROR_PROMISC_PERM_DENIED)."
                 )
             }
             Error::TimestampPrecisionNotSupported => {
@@ -134,9 +126,9 @@ impl fmt::Display for Error {
                     "libcap: Time stamp precision is not supported (PCAP_ERROR_TSTAMP_PRECISION_NOTSUP)."
                 )
             }
-            Error::PcapError(err) => write!(f, "libpcap error: {}", err),
-            Error::PcapWarning(warn) => write!(f, "libpcap warning: {}", warn),
-            Error::PcapErrorCode(code) => write!(f, "libpcap unknown error code: {}", code),
+            Error::PcapError(err) => write!(f, "libpcap error: {err}"),
+            Error::PcapWarning(warn) => write!(f, "libpcap warning: {warn}"),
+            Error::PcapErrorCode(code) => write!(f, "libpcap unknown error code: {code}"),
 
             Error::Timeout => write!(f, "timeout"),
             Error::CStringError(CStringError::FromBytesWithNul(err)) => err.fmt(f),
