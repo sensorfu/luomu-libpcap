@@ -142,28 +142,25 @@ impl From<Error> for io::Error {
     fn from(err: Error) -> io::Error {
         match err {
             Error::NoSuchDevice(interface) => {
-                io::Error::new(io::ErrorKind::NotFound, format!("{} not found", interface))
+                io::Error::new(io::ErrorKind::NotFound, format!("{interface} not found"))
             }
-            Error::MonitorModeNotSupported(interface) => io::Error::new(
-                io::ErrorKind::Other,
-                format!("interface {} doesn't support monitor mode", interface),
-            ),
+            Error::MonitorModeNotSupported(interface) => io::Error::other(format!(
+                "interface {interface} doesn't support monitor mode"
+            )),
             Error::PermissionDenied(interface) => io::Error::new(
                 io::ErrorKind::PermissionDenied,
-                format!("could not open {}, permission denied", interface),
+                format!("could not open {interface}, permission denied"),
             ),
-            Error::InterfaceNotUp(interface) => io::Error::new(
-                io::ErrorKind::Other,
-                format!("could not open {}, interface not up", interface),
-            ),
+            Error::InterfaceNotUp(interface) => {
+                io::Error::other(format!("could not open {interface}, interface not up"))
+            }
             Error::PromiscuousPermissionDenied(interface) => io::Error::new(
                 io::ErrorKind::PermissionDenied,
                 format!(
-                    "could not set interface {} to promiscuous mode, permission denied",
-                    interface
+                    "could not set interface {interface} to promiscuous mode, permission denied",
                 ),
             ),
-            err => io::Error::new(io::ErrorKind::Other, err.to_string()),
+            err => io::Error::other(err.to_string()),
         }
     }
 }
