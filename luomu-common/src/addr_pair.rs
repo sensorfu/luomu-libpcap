@@ -1,6 +1,6 @@
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
-use crate::{tagged_macaddr::TagStack, MacAddr, TagError};
+use crate::{MacAddr, TagError, tagged_macaddr::TagStack};
 
 use super::{Destination, Source};
 
@@ -56,12 +56,8 @@ impl AddrPair<IpAddr> for IPPair {
     /// safe versions.
     fn new(src: Source<IpAddr>, dst: Destination<IpAddr>) -> IPPair {
         match (src.into_inner(), dst.into_inner()) {
-            (IpAddr::V4(src), IpAddr::V4(dst)) => {
-                IPPair::new_v4(Source::new(src), Destination::new(dst))
-            }
-            (IpAddr::V6(src), IpAddr::V6(dst)) => {
-                IPPair::new_v6(Source::new(src), Destination::new(dst))
-            }
+            (IpAddr::V4(src), IpAddr::V4(dst)) => IPPair::new_v4(Source::new(src), Destination::new(dst)),
+            (IpAddr::V6(src), IpAddr::V6(dst)) => IPPair::new_v6(Source::new(src), Destination::new(dst)),
             _ => panic!(
                 "IPPair::new() invalid IP address families provided. src: {:?}, dst: {:?}",
                 src, dst
@@ -125,12 +121,8 @@ impl IPPair {
     /// None is returned if addresses are of different address families.
     pub fn new_checked(src: Source<IpAddr>, dst: Destination<IpAddr>) -> Option<IPPair> {
         match (src.into_inner(), dst.into_inner()) {
-            (IpAddr::V4(s), IpAddr::V4(d)) => {
-                Some(IPPair::new_v4(Source::new(s), Destination::new(d)))
-            }
-            (IpAddr::V6(s), IpAddr::V6(d)) => {
-                Some(IPPair::new_v6(Source::new(s), Destination::new(d)))
-            }
+            (IpAddr::V4(s), IpAddr::V4(d)) => Some(IPPair::new_v4(Source::new(s), Destination::new(d))),
+            (IpAddr::V6(s), IpAddr::V6(d)) => Some(IPPair::new_v6(Source::new(s), Destination::new(d))),
             _ => None,
         }
     }
@@ -427,22 +419,10 @@ mod tests {
         let ip3: IpAddr = "2001:db8::1".parse().unwrap();
         let ip4: IpAddr = "2001:db8:42::12:765".parse().unwrap();
 
-        assert_eq!(
-            IPPair::new_checked(Source::new(ip1), Destination::new(ip3)),
-            None
-        );
-        assert_eq!(
-            IPPair::new_checked(Source::new(ip2), Destination::new(ip4)),
-            None
-        );
-        assert_eq!(
-            IPPair::new_checked(Source::new(ip3), Destination::new(ip1)),
-            None
-        );
-        assert_eq!(
-            IPPair::new_checked(Source::new(ip4), Destination::new(ip2)),
-            None
-        );
+        assert_eq!(IPPair::new_checked(Source::new(ip1), Destination::new(ip3)), None);
+        assert_eq!(IPPair::new_checked(Source::new(ip2), Destination::new(ip4)), None);
+        assert_eq!(IPPair::new_checked(Source::new(ip3), Destination::new(ip1)), None);
+        assert_eq!(IPPair::new_checked(Source::new(ip4), Destination::new(ip2)), None);
     }
 
     #[test]

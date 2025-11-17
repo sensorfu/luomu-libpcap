@@ -195,9 +195,7 @@ impl From<[u8; 6]> for MacAddr {
 
 impl From<&[u8; 6]> for MacAddr {
     fn from(v: &[u8; 6]) -> Self {
-        Self(u64::from_be_bytes([
-            0, 0, v[0], v[1], v[2], v[3], v[4], v[5],
-        ]))
+        Self(u64::from_be_bytes([0, 0, v[0], v[1], v[2], v[3], v[4], v[5]]))
     }
 }
 

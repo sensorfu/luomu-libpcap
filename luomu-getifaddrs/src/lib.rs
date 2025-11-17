@@ -238,9 +238,7 @@ impl IfAddr {
         match family {
             libc::AF_INET => {
                 let a: libc::sockaddr_in = sa_as_sockaddr_in(ifa_addr);
-                Some(Address::from(Ipv4Addr::from(u32::from_be(
-                    a.sin_addr.s_addr,
-                ))))
+                Some(Address::from(Ipv4Addr::from(u32::from_be(a.sin_addr.s_addr))))
             }
             libc::AF_INET6 => {
                 let a: libc::sockaddr_in6 = sa_as_sockaddr_in6(ifa_addr);
@@ -271,8 +269,7 @@ impl IfAddr {
                 // mac address stored after name
                 // You may want to look into LLADDR() macro somewhere on Mac OS headers
                 let offset = usize::from(a.sdl_nlen);
-                address[..MAC_ADDR_LEN]
-                    .copy_from_slice(&sdl_data_as_u8[offset..offset + MAC_ADDR_LEN]);
+                address[..MAC_ADDR_LEN].copy_from_slice(&sdl_data_as_u8[offset..offset + MAC_ADDR_LEN]);
                 Some(Address::from(address))
             }
             #[cfg(target_os = "linux")]
