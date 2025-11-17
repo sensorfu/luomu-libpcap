@@ -1,12 +1,12 @@
 [workspace.package]
 license = "MIT"
-edition = "2021"
-rust-version = "1.84.0" # MSRV
+edition = "2024"
+rust-version = "1.91.0" # MSRV
 homepage = "https://github.com/sensorfu/luomu-libpcap#readme"
 repository = "https://github.com/sensorfu/luomu-libpcap"
 
 [workspace]
-resolver = "2"
+resolver = "3"
 members = [
 	# "fuzz",
 	"luomu-common",
@@ -60,7 +60,3 @@ unsafe-code = "deny"
 
 # Allow cfg(kani)
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
-
-# Remove these after moving to Rust 2024 edition
-tail_expr_drop_order = "allow"
-if_let_rescope = "allow"
