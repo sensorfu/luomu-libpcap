@@ -150,10 +150,16 @@ pub fn pcap_set_immediate_mode(pcap_t: &PcapT, immediate: bool) -> Result<()> {
 /// capture handle when the handle is activated to to_ms, which is in units of
 /// milliseconds.
 ///
+/// The behavior, if the timeout isn't specified, is undefined, as is the
+/// behavior if the timeout is set to zero. We recommend always setting the
+/// timeout to a non-zero value unless immediate mode is set, in which case the
+/// timeout has no effect.
+///
 /// <https://www.tcpdump.org/manpages/pcap_set_timeout.3pcap.html>
-pub fn pcap_set_timeout(pcap_t: &PcapT, to_ms: i32) -> Result<()> {
+pub fn pcap_set_timeout(pcap_t: &PcapT, to_ms: usize) -> Result<()> {
     tracing::trace!("pcap_set_timeout({:p}, {to_ms})", pcap_t.pcap_t);
-    let ret = unsafe { libpcap::pcap_set_timeout(pcap_t.pcap_t, to_ms as libc::c_int) };
+    let timeout = libc::c_int::try_from(to_ms).unwrap_or(libc::c_int::MAX);
+    let ret = unsafe { libpcap::pcap_set_timeout(pcap_t.pcap_t, timeout) };
     check_pcap_error(pcap_t, ret)
 }
 

@@ -275,7 +275,7 @@ impl PcapBuilder {
     /// capture handle when the handle is activated to to_ms, which is in units of
     /// milliseconds.
     pub fn set_timeout(self, to_ms: Duration) -> Result<PcapBuilder> {
-        let timeout = i32::try_from(to_ms.as_millis()).unwrap_or(i32::MAX);
+        let timeout = usize::try_from(to_ms.as_millis()).unwrap_or(usize::MAX);
         pcap_set_timeout(&self.pcap_t, timeout)?;
         Ok(self)
     }
