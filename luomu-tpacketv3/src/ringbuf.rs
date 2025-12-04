@@ -1,11 +1,10 @@
-use crate::if_packet;
 use std::fmt;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// Descriptor for single packet within a block in mmapped ringbuffer
 pub struct PacketDescriptor<'a> {
     ptr: *mut u8,
-    hdr: &'a if_packet::tpacket3_hdr,
+    hdr: &'a libc::tpacket3_hdr,
 }
 
 impl<'a> PacketDescriptor<'a> {
@@ -13,7 +12,7 @@ impl<'a> PacketDescriptor<'a> {
     pub fn get_next(self) -> PacketDescriptor<'a> {
         let next_offset = isize::try_from(self.hdr.tp_next_offset).unwrap_or(isize::MAX);
         let next_ptr = unsafe { self.ptr.offset(next_offset) };
-        let next_hdr_ptr = next_ptr as *const if_packet::tpacket3_hdr;
+        let next_hdr_ptr = next_ptr as *const libc::tpacket3_hdr;
         PacketDescriptor {
             ptr: next_ptr,
             hdr: unsafe { next_hdr_ptr.as_ref().unwrap() },
@@ -32,11 +31,11 @@ impl<'a> PacketDescriptor<'a> {
     }
 
     pub fn has_vlan_tci(&self) -> bool {
-        (self.hdr.tp_status & if_packet::TP_STATUS_VLAN_VALID) == if_packet::TP_STATUS_VLAN_VALID
+        (self.hdr.tp_status & libc::TP_STATUS_VLAN_VALID) == libc::TP_STATUS_VLAN_VALID
     }
 
     pub fn has_vlan_tpid(&self) -> bool {
-        (self.hdr.tp_status & if_packet::TP_STATUS_VLAN_TPID_VALID) == if_packet::TP_STATUS_VLAN_TPID_VALID
+        (self.hdr.tp_status & libc::TP_STATUS_VLAN_TPID_VALID) == libc::TP_STATUS_VLAN_TPID_VALID
     }
 
     pub fn get_vlan_tci(&self) -> u32 {
@@ -51,7 +50,7 @@ impl<'a> PacketDescriptor<'a> {
 impl From<*mut u8> for PacketDescriptor<'_> {
     #[allow(clippy::cast_ptr_alignment)]
     fn from(ptr: *mut u8) -> Self {
-        let hdr_ptr = ptr as *const if_packet::tpacket3_hdr;
+        let hdr_ptr = ptr as *const libc::tpacket3_hdr;
         let hdr = unsafe { hdr_ptr.as_ref().unwrap() };
         PacketDescriptor { ptr, hdr }
     }
@@ -64,27 +63,32 @@ impl From<*mut u8> for PacketDescriptor<'_> {
 /// needs to be called to indicate kernel that it free to use this block again
 #[derive(Debug)]
 pub struct BlockDescriptor<'a> {
-    ptr: *mut u8,                                // pointer to the start of the data
-    desc: &'a mut if_packet::tpacket_block_desc, // the actual block descriptor
+    ptr: *mut u8,                           // pointer to the start of the data
+    desc: &'a mut libc::tpacket_block_desc, // the actual block descriptor
 }
 
 unsafe impl Send for BlockDescriptor<'_> {}
 
 impl<'a> BlockDescriptor<'a> {
+    // Returns reference to block header
+    fn block_header(&self) -> &libc::tpacket_hdr_v1 {
+        unsafe { &self.desc.hdr.bh1 }
+    }
+
     pub fn flush(&mut self) {
-        self.desc.hdr.block_status = if_packet::TP_STATUS_KERNEL;
+        self.desc.hdr.bh1.block_status = libc::TP_STATUS_KERNEL;
     }
 
     pub fn is_ready(&self) -> bool {
-        self.desc.hdr.block_status & if_packet::TP_STATUS_USER != 0
+        self.block_header().block_status & libc::TP_STATUS_USER != 0
     }
 
     pub fn get_number_of_packets(&self) -> u32 {
-        self.desc.hdr.num_packets
+        self.block_header().num_pkts
     }
 
     pub fn get_first_packet(&self) -> PacketDescriptor<'a> {
-        let offset = isize::try_from(self.desc.hdr.offset_to_first_pkt).unwrap_or(isize::MAX);
+        let offset = isize::try_from(self.block_header().offset_to_first_pkt).unwrap_or(isize::MAX);
         unsafe { self.ptr.offset(offset) }.into()
     }
 }
@@ -92,7 +96,7 @@ impl<'a> BlockDescriptor<'a> {
 impl From<*mut u8> for BlockDescriptor<'_> {
     #[allow(clippy::cast_ptr_alignment)]
     fn from(ptr: *mut u8) -> Self {
-        let desc_ptr = ptr.cast::<if_packet::tpacket_block_desc>();
+        let desc_ptr = ptr.cast::<libc::tpacket_block_desc>();
 
         BlockDescriptor {
             ptr,

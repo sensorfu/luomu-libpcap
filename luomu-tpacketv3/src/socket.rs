@@ -3,10 +3,6 @@ use std::time::Duration;
 
 use luomu_libpcap::PcapFilter;
 
-use crate::if_packet;
-
-const SO_ATTACH_FILTER: libc::c_int = libc::SO_ATTACH_FILTER;
-
 pub fn htons(val: u16) -> u16 {
     val.to_be()
 }
@@ -48,12 +44,12 @@ impl<T> Option<T> {
 
     fn name(&self) -> libc::c_int {
         match self {
-            Option::PacketVersion(_) => if_packet::PACKET_VERSION,
-            Option::PacketRxRing(_) => if_packet::PACKET_RX_RING,
-            Option::PacketAddMembership(_) => if_packet::PACKET_ADD_MEMBERSHIP,
-            Option::PacketStatistics(_) => if_packet::PACKET_STATISTICS,
-            Option::PacketFanout(_) => if_packet::PACKET_FANOUT,
-            Option::SocketAttachFilter(_) => SO_ATTACH_FILTER,
+            Option::PacketVersion(_) => libc::PACKET_VERSION,
+            Option::PacketRxRing(_) => libc::PACKET_RX_RING,
+            Option::PacketAddMembership(_) => libc::PACKET_ADD_MEMBERSHIP,
+            Option::PacketStatistics(_) => libc::PACKET_STATISTICS,
+            Option::PacketFanout(_) => libc::PACKET_FANOUT,
+            Option::SocketAttachFilter(_) => libc::SO_ATTACH_FILTER,
         }
     }
 

@@ -8,7 +8,6 @@ use std::time::{Duration, SystemTime};
 
 use luomu_libpcap::PcapFilter;
 
-mod if_packet;
 mod ringbuf;
 mod socket;
 
@@ -35,20 +34,20 @@ pub enum FanoutMode {
 
 impl FanoutMode {
     // Get the actual numeric code for this fanout mode
-    fn val(self) -> libc::c_int {
+    fn val(self) -> u32 {
         match self {
-            FanoutMode::HASH(_) => if_packet::PACKET_FANOUT_HASH,
-            FanoutMode::LB(_) => if_packet::PACKET_FANOUT_LB,
-            FanoutMode::ROLLOVER(_) => if_packet::PACKET_FANOUT_ROLLOVER,
-            FanoutMode::RND(_) => if_packet::PACKET_FANOUT_RND,
-            FanoutMode::QM(_) => if_packet::PACKET_FANOUT_QM,
-            FanoutMode::CBPF(_) => if_packet::PACKET_FANOUT_CBPF,
-            FanoutMode::EBPF(_) => if_packet::PACKET_FANOUT_EBPF,
-            FanoutMode::CPU(_) => if_packet::PACKET_FANOUT_CPU,
+            FanoutMode::HASH(_) => libc::PACKET_FANOUT_HASH,
+            FanoutMode::LB(_) => libc::PACKET_FANOUT_LB,
+            FanoutMode::ROLLOVER(_) => libc::PACKET_FANOUT_ROLLOVER,
+            FanoutMode::RND(_) => libc::PACKET_FANOUT_RND,
+            FanoutMode::QM(_) => libc::PACKET_FANOUT_QM,
+            FanoutMode::CBPF(_) => libc::PACKET_FANOUT_CBPF,
+            FanoutMode::EBPF(_) => libc::PACKET_FANOUT_EBPF,
+            FanoutMode::CPU(_) => libc::PACKET_FANOUT_CPU,
         }
     }
 
-    fn arg(self) -> i32 {
+    fn arg(self) -> u32 {
         let group_id = match self {
             FanoutMode::HASH(v)
             | FanoutMode::LB(v)
@@ -60,7 +59,7 @@ impl FanoutMode {
             | FanoutMode::CPU(v) => v,
         };
 
-        i32::from(group_id) | (self.val() << 16)
+        u32::from(group_id) | (self.val() << 16)
     }
 }
 
@@ -139,13 +138,13 @@ pub fn reader<'a>(
 
     // set version to tpacket_v3
     let opt = socket::OptValue {
-        val: if_packet::TPACKET_V3,
+        val: libc::tpacket_versions::TPACKET_V3,
     };
     tracing::trace!("Setting packet version");
     sock.setopt(&socket::Option::PacketVersion(opt))
         .map_err(|e| format!("packet version sockopt failed: {e}"))?;
 
-    let req = if_packet::tpacket_req3 {
+    let req = libc::tpacket_req3 {
         tp_block_size: parameters.block_size,
         tp_block_nr: parameters.block_count,
         tp_frame_size: parameters.frame_size,
@@ -260,7 +259,7 @@ impl<'a> Reader<'a> {
     /// packets captured (first element) and dropped (second element) or
     /// Err if stats could not be read.
     pub fn stats(&self) -> Result<(u32, u32), String> {
-        let t_stats = if_packet::tpacket_stats_v3 {
+        let t_stats = libc::tpacket_stats_v3 {
             tp_packets: 0,
             tp_drops: 0,
             tp_freeze_q_cnt: 0,
