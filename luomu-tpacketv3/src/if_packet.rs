@@ -74,14 +74,14 @@ pub struct tpacket_bd_ts {
     pub ts_nsec: libc::c_uint, // really an union of ts_usec & ts_nsec
 }
 
-#[repr(C)]
+#[repr(C, align(8))]
 #[derive(Debug)]
 pub struct tpacket_hdr_v1 {
     pub block_status: u32,
     pub num_packets: u32,
     pub offset_to_first_pkt: u32,
     pub blk_len: u32,
-    pub seq_num: u32,
+    pub seq_num: u64,
     pub ts_first_packet: tpacket_bd_ts,
     pub ts_last_packet: tpacket_bd_ts,
 }

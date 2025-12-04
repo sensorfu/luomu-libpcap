@@ -162,7 +162,7 @@ impl Map {
         );
         let my_ptr = self.ptr;
         let buf_ptr = my_ptr.cast::<u8>();
-        let block_size = isize::try_from(self.block_count).unwrap_or(isize::MAX);
+        let block_size = isize::try_from(self.block_size).unwrap_or(isize::MAX);
         let offset = index * block_size;
         unsafe { buf_ptr.offset(offset) }
     }
