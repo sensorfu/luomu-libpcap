@@ -61,7 +61,6 @@ impl From<*mut u8> for PacketDescriptor<'_> {
 /// Block is either owned by kernel or ready. Ready block contains 1 or more
 /// packets which can be read. Once all packets have been consumed, flush()
 /// needs to be called to indicate kernel that it free to use this block again
-#[derive(Debug)]
 pub struct BlockDescriptor<'a> {
     ptr: *mut u8,                           // pointer to the start of the data
     desc: &'a mut libc::tpacket_block_desc, // the actual block descriptor
