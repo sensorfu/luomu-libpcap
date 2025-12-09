@@ -3,7 +3,7 @@
 
 use std::error::Error;
 use std::ffi::CString;
-use std::fmt;
+use std::fmt::{self, Display};
 use std::time::{Duration, SystemTime};
 
 use luomu_libpcap::PcapFilter;
@@ -63,22 +63,55 @@ impl FanoutMode {
     }
 }
 
+/// Error returned by [ParameterBuilder::build] if parameters are invalid
+#[derive(Debug, Copy, Clone)]
+pub enum ParameterError {
+    /// Block size is invalid
+    InvalidBlockSize,
+    /// Block count is invalid
+    InvalidBlockCount,
+    /// Frame size is invalid
+    InvalidFrameSize,
+}
+
+impl Display for ParameterError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidBlockSize => f.write_str("block size needs to be multiple of page size"),
+            Self::InvalidBlockCount => f.write_str("invalid block count, need non-zero integer"),
+            Self::InvalidFrameSize => write!(
+                f,
+                "invalid frame size, frame size needs to be at least {} bytes",
+                libc::TPACKET3_HDRLEN
+            ),
+        }
+    }
+}
+
+impl Error for ParameterError {}
+
 /// Parameters for tpacket reader.
+///
+/// Use [ReaderParameters::builder()] to get a builder which can be used to
+/// build parameters for Reeader. [ReaderParameters::default()] will  return
+/// default parameters which can be used.
 ///
 /// These parameters are used to configure the memory allocated for packet
 /// receive ringbuffer and fanout mode to use. See
 /// <https://www.kernel.org/doc/Documentation/networking/packet_mmap.txt> for
 /// detailed information about the configuration.
+///
+///
 #[derive(Copy, Clone)]
 pub struct ReaderParameters {
     /// Size for a single block. Needs to be a multiple of pagesize
-    pub block_size: u32,
+    block_size: u32,
     /// Number of blocks to allocate.
-    pub block_count: u32,
+    block_count: u32,
     /// Maximum size for single packet.
-    pub frame_size: u32,
+    frame_size: u32,
     /// Fanout mode to set, None for no fanout mode.
-    pub fanout: Option<FanoutMode>,
+    fanout: Option<FanoutMode>,
 }
 
 impl Default for ReaderParameters {
@@ -92,7 +125,71 @@ impl Default for ReaderParameters {
     }
 }
 
+/// Builder for creating [ReaderParameters]
+///
+/// Use [ReaderParameters::builder()] to get instance of builder and
+/// [ParameterBuilder::build()] to create parameters.
+pub struct ParameterBuilder(ReaderParameters);
+
+impl ParameterBuilder {
+    /// Creates [ReaderParameters] according to values given to builder. Returns
+    /// error if parameters are invalid.
+    pub fn build(self) -> Result<ReaderParameters, ParameterError> {
+        let psize = u32::try_from(unsafe { libc::sysconf(libc::_SC_PAGESIZE) }).unwrap_or(4096);
+        if !self.0.block_size.is_multiple_of(psize) {
+            return Err(ParameterError::InvalidBlockSize);
+        }
+        if self.0.block_count == 0 {
+            return Err(ParameterError::InvalidBlockCount);
+        }
+        if self.0.frame_size < u32::try_from(libc::TPACKET3_HDRLEN).unwrap_or(0) {
+            return Err(ParameterError::InvalidFrameSize);
+        }
+        Ok(self.0)
+    }
+
+    /// Sets block size
+    ///
+    /// This is the size of a single block to allocate, it needs to be a
+    /// multiple of systems page size.
+    #[must_use]
+    pub fn with_block_size(mut self, block_size: u32) -> Self {
+        self.0.block_size = block_size;
+        self
+    }
+
+    /// Sets block count
+    ///
+    /// This is the number of blocks to allocate. The total size for packet
+    /// ringbuffer is block_count * block_size
+    #[must_use]
+    pub fn with_block_count(mut self, block_count: u32) -> Self {
+        self.0.block_count = block_count;
+        self
+    }
+
+    /// Sets maximum size for frame that can be received.
+    #[must_use]
+    pub fn with_frame_size(mut self, frame_size: u32) -> Self {
+        self.0.frame_size = frame_size;
+        self
+    }
+
+    /// Sets fanout mode, [None] for no fanout mode.
+    #[must_use]
+    pub fn with_fanout_mode(mut self, fanout: Option<FanoutMode>) -> Self {
+        self.0.fanout = fanout;
+        self
+    }
+}
+
 impl ReaderParameters {
+    /// Returns a [PacketBuilder] instance that can be used to create set
+    /// of parameters.
+    pub fn builder() -> ParameterBuilder {
+        ParameterBuilder(Self::default())
+    }
+    /// Returns the maximum number of frames that fit the allocated buffer.
     fn frame_count(&self) -> u32 {
         (self.block_size * self.block_count) / self.frame_size
     }
