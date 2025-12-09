@@ -72,6 +72,8 @@ pub enum ParameterError {
     InvalidBlockCount,
     /// Frame size is invalid
     InvalidFrameSize,
+    /// Block timeout is invalid
+    InvalidBlockTimeout,
 }
 
 impl Display for ParameterError {
@@ -84,6 +86,7 @@ impl Display for ParameterError {
                 "invalid frame size, frame size needs to be at least {} bytes",
                 libc::TPACKET3_HDRLEN
             ),
+            Self::InvalidBlockTimeout => f.write_str("block timeout needs to be at least 1ms"),
         }
     }
 }
@@ -112,6 +115,10 @@ pub struct ReaderParameters {
     frame_size: u32,
     /// Fanout mode to set, None for no fanout mode.
     fanout: Option<FanoutMode>,
+    /// True to set interface to promiscuous mode
+    promisc: bool,
+    /// Block timeout the kernel uses for retiring blocks.
+    block_timeout: Duration,
 }
 
 impl Default for ReaderParameters {
@@ -121,6 +128,8 @@ impl Default for ReaderParameters {
             block_size: 1024 * 1024 * 2, // 2MB blocks
             frame_size: 2048,
             fanout: None,
+            promisc: true,
+            block_timeout: Duration::from_millis(100),
         }
     }
 }
@@ -144,6 +153,9 @@ impl ParameterBuilder {
         }
         if self.0.frame_size < u32::try_from(libc::TPACKET3_HDRLEN).unwrap_or(0) {
             return Err(ParameterError::InvalidFrameSize);
+        }
+        if self.0.block_timeout < Duration::from_millis(1) {
+            return Err(ParameterError::InvalidBlockTimeout);
         }
         Ok(self.0)
     }
@@ -179,6 +191,23 @@ impl ParameterBuilder {
     #[must_use]
     pub fn with_fanout_mode(mut self, fanout: Option<FanoutMode>) -> Self {
         self.0.fanout = fanout;
+        self
+    }
+
+    /// Sets the timeout value for blocks.
+    ///
+    /// This is the timeout kernel uses to fill and move to next block.
+    #[must_use]
+    pub fn with_block_timeout(mut self, timeout: Duration) -> Self {
+        self.0.block_timeout = timeout;
+        self
+    }
+
+    /// Sets promiscuous mode. If `promisc` is false, then interface is not
+    /// set to promiscuous mode when starting capture.
+    #[must_use]
+    pub fn with_promiscuous_mode(mut self, promisc: bool) -> Self {
+        self.0.promisc = promisc;
         self
     }
 }
@@ -246,7 +275,7 @@ pub fn reader<'a>(
         tp_block_nr: parameters.block_count,
         tp_frame_size: parameters.frame_size,
         tp_frame_nr: parameters.frame_count(),
-        tp_retire_blk_tov: 100,
+        tp_retire_blk_tov: u32::try_from(parameters.block_timeout.as_millis()).unwrap_or(u32::MAX),
         tp_feature_req_word: 0,
         tp_sizeof_priv: 0,
     };
@@ -261,16 +290,18 @@ pub fn reader<'a>(
             .map_err(|e| format!("Can not set filter: {e}"))?;
     }
 
-    tracing::trace!("Setting PROMISC mode");
-    let mr = libc::packet_mreq {
-        mr_ifindex: libc::c_int::try_from(index).unwrap_or(libc::c_int::MAX),
-        #[allow(clippy::cast_possible_truncation)]
-        mr_type: libc::PACKET_MR_PROMISC as u16,
-        mr_alen: 0,
-        mr_address: [0; 8],
-    };
-    sock.setopt(&socket::Option::PacketAddMembership(socket::OptValue { val: mr }))
-        .map_err(|e| format!("ADD_MEMBERSHIP sockopt failed: {e}"))?;
+    if parameters.promisc {
+        tracing::trace!("Setting PROMISC mode");
+        let mr = libc::packet_mreq {
+            mr_ifindex: libc::c_int::try_from(index).unwrap_or(libc::c_int::MAX),
+            #[allow(clippy::cast_possible_truncation)]
+            mr_type: libc::PACKET_MR_PROMISC as u16,
+            mr_alen: 0,
+            mr_address: [0; 8],
+        };
+        sock.setopt(&socket::Option::PacketAddMembership(socket::OptValue { val: mr }))
+            .map_err(|e| format!("ADD_MEMBERSHIP sockopt failed: {e}"))?;
+    }
 
     tracing::trace!("Mapping ring");
     let map = ringbuf::Map::create(parameters.block_size, parameters.block_count, sock.raw_fd())

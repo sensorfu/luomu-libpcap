@@ -124,10 +124,21 @@ mod linux {
         /// ID of the fanout group
         #[arg(short, long)]
         groupid: Option<u16>,
+
+        /// Do not put the interface into promiscuous mode
+        #[arg(long)]
+        no_promisc: bool,
+
+        /// Block timeout
+        #[arg(long, default_value_t = 100u32)]
+        block_timeout_ms: u32,
     }
 
     pub fn main() {
-        tracing_subscriber::fmt::init();
+        // tracing_subscriber::fmt::init();
+        tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::DEBUG)
+            .init();
         let cli = Args::parse();
 
         let read_time: Duration = Duration::from_secs(cli.duration);
@@ -136,6 +147,8 @@ mod linux {
         let ifname = cli.interface;
         let workers: u32 = cli.workers;
         let groupid: u16 = cli.groupid.unwrap_or(1001);
+        let promisc = !cli.no_promisc;
+        let block_timeout = Duration::from_millis(cli.block_timeout_ms.into());
 
         let fanout_mode = if let Some(v) = cli.fanout {
             match &*v {
@@ -163,6 +176,8 @@ mod linux {
             .with_block_count(blocks)
             .with_block_size(blocksize)
             .with_fanout_mode(fanout_mode)
+            .with_promiscuous_mode(promisc)
+            .with_block_timeout(block_timeout)
             .build()
         {
             Err(err) => {
