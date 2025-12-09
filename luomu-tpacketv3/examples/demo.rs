@@ -86,12 +86,7 @@ mod linux {
         stop: Arc<AtomicBool>,
     ) {
         let thread = thread::current();
-        tracing::debug!(
-            "Worker {}, using Buffer with {} blocks of {} bytes",
-            thread.name().unwrap_or("N/A"),
-            params.block_count,
-            params.block_size
-        );
+        tracing::debug!("starting worker {}", thread.name().unwrap_or("N/A"),);
         match tpacketv3::reader(interface, None, params) {
             Err(e) => tracing::warn!("Unable to create reader: {e}"),
             Ok(rd) => {
@@ -164,10 +159,21 @@ mod linux {
             .spawn(move || packet_consumer(rx, c_stop))
             .unwrap();
 
-        let mut params: tpacketv3::ReaderParameters = Default::default();
-        params.block_count = blocks;
-        params.block_size = blocksize;
-        params.fanout = fanout_mode;
+        let params = match tpacketv3::ReaderParameters::builder()
+            .with_block_count(blocks)
+            .with_block_size(blocksize)
+            .with_fanout_mode(fanout_mode)
+            .build()
+        {
+            Err(err) => {
+                println!("Invalid parameters: {err}");
+                return;
+            }
+            Ok(p) => p,
+        };
+
+        tracing::debug!("starting workers. Using buffer of {blocks} {blocksize} byte blocks");
+
         let mut producers = Vec::new();
         for i in 0..workers {
             let flag = stop.clone();
