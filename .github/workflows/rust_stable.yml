@@ -1,10 +1,13 @@
+name: Rust Stable CI
+
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
 
-name: Rust Stable CI
+permissions:
+  contents: read
 
 jobs:
   lints:
@@ -12,7 +15,9 @@ jobs:
     steps:
       - name: Install dependencies
         run: sudo apt -y update && sudo apt -y install flex bison
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - uses: sensorfu/setup-rust-action@v1
         with:
           components: clippy,rustfmt
