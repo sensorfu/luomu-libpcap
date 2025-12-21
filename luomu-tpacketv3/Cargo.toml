@@ -1,8 +1,11 @@
 [package]
 name = "luomu-tpacketv3"
-description = "Rust bindings for packet capture using AF_PACKET and tpacketv3 on linux"
+description = "Rust bindings for packet capture using AF_PACKET and tpacketv3 on Linux"
 version = "0.1.0"
 authors = [ "Jukka Taimisto <jtaimisto@gmail.com>" ]
+readme = "README.md"
+categories = [ "external-ffi-bindings", "os::linux-apis", "network-programming" ]
+keywords = [ "tpacket", "tpacketv3", "packet_mmap" ]
 license.workspace = true
 edition.workspace = true
 rust-version.workspace = true
