@@ -1,24 +1,5 @@
+#![doc = include_str!("../README.md")]
 #![allow(unsafe_code)]
-
-//! # luomu-libpcap
-//!
-//! Safe and mostly sane Rust bindings for [libpcap](https://www.tcpdump.org/).
-//!
-//! We are split in two different crates:
-//!
-//!   * `luomu-libpcap-sys` for unsafe Rust bindings generated directly from
-//!     `libpcap`.
-//!   * `luomu-libpcap` for safe and sane libpcap interface.
-//!
-//! `luomu-libpcap` crate is split into two parts itself:
-//!
-//!   * `functions` module contains safe wrappers and sane return values for
-//!     libpcap functions.
-//!   * the root of the project contains `Pcap` struct et al. for more Rusty API
-//!     to interact with libpcap.
-//!
-//! You probably want to use the `Pcap` struct and other things from root of
-//! this crate.
 
 use std::collections::{BTreeSet, HashSet};
 use std::convert::TryFrom;
