@@ -5,17 +5,19 @@ use std::str::FromStr;
 
 use crate::{InvalidAddress, TagError};
 
-// The MAC address portion of u64
+/// The MAC address portion of u64
 const MAC_BITS: u64 = 0x0000_FFFF_FFFF_FFFF;
 
-// The VLAN tag portion of u64
+/// The VLAN tag portion of u64
 const TAG_BITS: u64 = 0x0FFF_0000_0000_0000;
 
-///  Address bytes for Ethernet multicast MAC for All Nodes IPv6 multicast.
+/// Address bytes for Ethernet multicast MAC for All Nodes IPv6 multicast.
 const ALL_NODES_MAC: [u8; 6] = [0x33, 0x33, 0x00, 0x00, 0x00, 0x01];
+
 /// Base address to use when creating mac addresses for IPv6 multicast
 /// addresses. See RFC2464 sect 7.
 const IPV6_MULTICAST_BASE_MAC: [u8; 6] = [0x33, 0x33, 0x0, 0x0, 0x0, 0x0];
+
 /// Base address to use when creating mac addresses for IPv4 multicast
 /// addresses. Ses RFC1112 sect6.4
 const IPV4_MULTICAST_BASE_MAC: [u8; 6] = [0x01, 0x00, 0x5E, 0x0, 0x0, 0x0];

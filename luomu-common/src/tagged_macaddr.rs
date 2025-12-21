@@ -1,6 +1,6 @@
 use crate::{MacAddr, TagError};
 
-/// Size of our tag stack. 64bit integer can store up to five VLAN tags.
+/// Size of our tag stack. 64 bit integer can store up to five VLAN tags.
 type TagStackSize = u64;
 
 /// A stack of up to five VLAN tags.

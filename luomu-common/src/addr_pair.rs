@@ -1,8 +1,7 @@
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
-use crate::{MacAddr, TagError, tagged_macaddr::TagStack};
-
-use super::{Destination, Source};
+use crate::tagged_macaddr::TagStack;
+use crate::{Destination, MacAddr, Source, TagError};
 
 /// In network protocol implementations addresses usually comes in pairs: Source
 /// and destination IP address, source and destination ports, etc.
@@ -66,16 +65,16 @@ impl AddrPair<IpAddr> for IPPair {
     /// Returns the source IP address from pair.
     fn source(&self) -> Source<IpAddr> {
         match self {
-            IPPair::V4 { src, .. } => Source::new(IpAddr::from(src.into_inner())),
-            IPPair::V6 { src, .. } => Source::new(IpAddr::from(src.into_inner())),
+            IPPair::V4 { src, .. } => src.map(IpAddr::V4),
+            IPPair::V6 { src, .. } => src.map(IpAddr::V6),
         }
     }
 
     /// Returns the destination IP address from pair.
     fn destination(&self) -> Destination<IpAddr> {
         match self {
-            IPPair::V4 { dst, .. } => Destination::new(IpAddr::from(dst.into_inner())),
-            IPPair::V6 { dst, .. } => Destination::new(IpAddr::from(dst.into_inner())),
+            IPPair::V4 { dst, .. } => dst.map(IpAddr::V4),
+            IPPair::V6 { dst, .. } => dst.map(IpAddr::V6),
         }
     }
 
@@ -116,7 +115,7 @@ impl From<(Destination<Ipv6Addr>, Source<Ipv6Addr>)> for IPPair {
 
 impl IPPair {
     /// Creates [IPPair] for given source and destination addresses.
-    /// None is returned if addresses are of different address families.
+    /// `None` is returned if addresses are of different address families.
     pub fn new_checked(src: Source<IpAddr>, dst: Destination<IpAddr>) -> Option<IPPair> {
         match (src.into_inner(), dst.into_inner()) {
             (IpAddr::V4(s), IpAddr::V4(d)) => Some(IPPair::new_v4(Source::new(s), Destination::new(d))),
@@ -124,6 +123,7 @@ impl IPPair {
             _ => None,
         }
     }
+
     /// Construct a new `IPPair` from two [Ipv4Addr].
     pub const fn new_v4(src: Source<Ipv4Addr>, dst: Destination<Ipv4Addr>) -> IPPair {
         IPPair::V4 { src, dst }

@@ -1,6 +1,4 @@
-//! # luomu-common
-//!
-//! Common types and functions for (low level) network programming.
+#![doc = include_str!("../README.md")]
 
 use std::fmt;
 

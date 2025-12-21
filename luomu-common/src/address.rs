@@ -1,9 +1,9 @@
 use std::convert::TryFrom;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
-use super::{InvalidAddress, MacAddr};
+use crate::{InvalidAddress, MacAddr};
 
-/// Address of some sort. IPv4, IPv6, MAC.
+/// [Address] of some sort. IPv4, IPv6 or MAC.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Address {
     /// IPv4 address
