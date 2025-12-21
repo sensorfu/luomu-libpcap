@@ -1,7 +1,7 @@
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::ops::{Deref, DerefMut};
 
-/// A `Source` of any kind. For example an IP address.
+/// A [Source] of any kind. For example an IP address.
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Source<ADDR>(ADDR);
 
@@ -58,17 +58,17 @@ impl<ADDR> AsMut<ADDR> for Source<ADDR> {
 
 impl From<Source<Ipv4Addr>> for Source<IpAddr> {
     fn from(addr: Source<Ipv4Addr>) -> Self {
-        Source::new(IpAddr::V4(addr.into_inner()))
+        addr.map(IpAddr::V4)
     }
 }
 
 impl From<Source<Ipv6Addr>> for Source<IpAddr> {
     fn from(addr: Source<Ipv6Addr>) -> Self {
-        Source::new(IpAddr::V6(addr.into_inner()))
+        addr.map(IpAddr::V6)
     }
 }
 
-/// A `Destination` of any kind. For example an IP address.
+/// A [Destination] of any kind. For example an IP address.
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Destination<ADDR>(ADDR);
 
@@ -125,13 +125,13 @@ impl<ADDR> AsMut<ADDR> for Destination<ADDR> {
 
 impl From<Destination<Ipv4Addr>> for Destination<IpAddr> {
     fn from(addr: Destination<Ipv4Addr>) -> Self {
-        Destination::new(IpAddr::V4(addr.into_inner()))
+        addr.map(IpAddr::V4)
     }
 }
 
 impl From<Destination<Ipv6Addr>> for Destination<IpAddr> {
     fn from(addr: Destination<Ipv6Addr>) -> Self {
-        Destination::new(IpAddr::V6(addr.into_inner()))
+        addr.map(IpAddr::V6)
     }
 }
 
