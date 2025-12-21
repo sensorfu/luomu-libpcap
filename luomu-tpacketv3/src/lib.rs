@@ -1,3 +1,4 @@
+#![doc = include_str!("../README.md")]
 #![allow(missing_docs, unsafe_code)]
 #![cfg(target_os = "linux")]
 
