@@ -1,0 +1,8 @@
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # Allow using GitHub Actions' own actions with just version tag
+        actions/*: ref-pin
+        # Allow using our own actions with just version tag
+        sensorfu/*: ref-pin

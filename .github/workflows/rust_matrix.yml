@@ -1,10 +1,13 @@
+name: Rust Matrix CI
+
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
 
-name: Rust Matrix CI
+permissions:
+  contents: read
 
 jobs:
   test-matrix:
@@ -22,7 +25,9 @@ jobs:
       - name: Install dependencies
         run: sudo apt -y update && sudo apt -y install flex bison
         if: ${{ startsWith(matrix.os, 'ubuntu') }}
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - uses: sensorfu/setup-rust-action@v1
         with:
           cache-key: ${{ matrix.os }}-${{ matrix.toolchain }}
@@ -41,7 +46,9 @@ jobs:
           - x86_64-unknown-linux-musl
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - uses: sensorfu/setup-rust-action@v1
         with:
           cache-key: ${{ matrix.target }}
