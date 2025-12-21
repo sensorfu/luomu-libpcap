@@ -1,5 +1,4 @@
-//! This module provides access for addresses, both IP and MAC, assigned
-//! for network interfaces as well as statistics for a interface.
+#![doc = include_str!("../README.md")]
 #![cfg(unix)]
 #![allow(unsafe_code)]
 
