@@ -135,7 +135,6 @@ mod linux {
     }
 
     pub fn main() {
-        // tracing_subscriber::fmt::init();
         tracing_subscriber::fmt()
             .with_max_level(tracing::Level::DEBUG)
             .init();
@@ -152,15 +151,15 @@ mod linux {
 
         let fanout_mode = if let Some(v) = cli.fanout {
             match &*v {
-                "hash" => Some(tpacketv3::FanoutMode::HASH(groupid)),
-                "lb" => Some(tpacketv3::FanoutMode::LB(groupid)),
-                "qm" => Some(tpacketv3::FanoutMode::QM(groupid)),
-                "cpu" => Some(tpacketv3::FanoutMode::CPU(groupid)),
-                "rnd" => Some(tpacketv3::FanoutMode::RND(groupid)),
+                "hash" => tpacketv3::FanoutMode::HASH(groupid),
+                "lb" => tpacketv3::FanoutMode::LB(groupid),
+                "qm" => tpacketv3::FanoutMode::QM(groupid),
+                "cpu" => tpacketv3::FanoutMode::CPU(groupid),
+                "rnd" => tpacketv3::FanoutMode::RND(groupid),
                 _ => panic!("Fanout mode {v} not supported"),
             }
         } else {
-            None
+            luomu_tpacketv3::FanoutMode::None
         };
 
         let stop = Arc::new(AtomicBool::new(false));
