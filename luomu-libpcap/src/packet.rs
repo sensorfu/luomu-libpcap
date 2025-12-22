@@ -35,7 +35,7 @@ pub trait Packet {
 
 /// A network packet with ownership of the underlying bytes.
 ///
-/// Calling `OwnedPacket::to_vec()` consumes the type and returns the packet
+/// Calling [OwnedPacket::to_vec()] consumes the type and returns the packet
 /// contents in `Vec<u8>` without doing a copy.
 #[derive(Clone, Debug)]
 pub struct OwnedPacket {
@@ -82,8 +82,8 @@ impl Packet for OwnedPacket {
 /// is good for doing a simple filtering in the receive loop as it eliminates
 /// making a copy of the data.
 //
-/// If you want to keep the contents, make a `OwnedPacket` by calling
-/// `BorrowedPacket::to_owned()` before getting next `Packet` from `libpcap`.
+/// If you want to keep the contents, make a [OwnedPacket] by calling
+/// [BorrowedPacket::to_owned()] before getting next `Packet` from `libpcap`.
 pub struct BorrowedPacket {
     pkthdr: *const pcap_pkthdr,
     ptr: *const u8,

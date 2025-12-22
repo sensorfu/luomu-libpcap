@@ -97,11 +97,11 @@ impl Drop for PcapT {
 ///
 /// This contains everything needed to capture the packets from network.
 ///
-/// To get started use `Pcap::builder()` to start a new Pcap capture builder.
+/// To get started use [Pcap::builder()] to start a new Pcap capture builder.
 /// Use it to set required options for the capture and then call
-/// `PcapBuider::activate()` to activate the capture.
+/// [PcapBuilder::activate()] to activate the capture.
 ///
-/// Then `Pcap::capture()` can be used to start an iterator for capturing
+/// Then [Pcap::capture()] can be used to start an iterator for capturing
 /// packets.
 pub struct Pcap {
     pcap_t: PcapT,
@@ -120,7 +120,8 @@ impl Pcap {
     /// Create a capture handle for reading packets from given savefile.
     ///
     /// This function can be used to create handle to read packes from saved
-    /// pcap -file. Use `capture()` to get iterator for packets in the file.
+    /// pcap -file. Use [Pcap::capture()] to get iterator for packets in the
+    /// file.
     pub fn offline<P: AsRef<Path>>(savefile: P) -> Result<Pcap> {
         Ok(Pcap {
             pcap_t: pcap_open_offline(savefile)?,
@@ -148,7 +149,7 @@ impl Pcap {
 
     /// Start capturing packets
     ///
-    /// This returns an iterator `PcapIter` which can be used to get captured
+    /// This returns an iterator [PcapIter] which can be used to get captured
     /// packets.
     pub fn capture(&self) -> PcapIter<'_> {
         PcapIter::new(&self.pcap_t)
@@ -168,6 +169,8 @@ impl Pcap {
     }
 
     /// Transmit a packet
+    ///
+    /// Returns the number of bytes written on success.
     pub fn inject(&self, buf: &[u8]) -> Result<usize> {
         pcap_inject(&self.pcap_t, buf)
     }
@@ -234,7 +237,7 @@ impl Errbuf {
     }
 }
 
-/// Builder for a `Pcap`. Call `Pcap::builder()` to get started.
+/// Builder for a [Pcap]. Call [Pcap::builder()] to get started.
 pub struct PcapBuilder {
     pcap_t: PcapT,
 }
@@ -318,7 +321,7 @@ impl PcapFilter {
         pcap_compile(&pcap, filter)
     }
 
-    /// compile a filter expression with `PcapT`
+    /// compile a filter expression with [PcapT]
     ///
     /// `compile_with_pcap_t()` is used to compile the filter into a filter
     /// program. See
@@ -336,6 +339,7 @@ impl PcapFilter {
     /// Get pointer to the raw compiled filter program.
     ///
     /// Raw filter may be used when attaching filter to socket outside libpcap.
+    ///
     /// # Safety
     /// Note that the pointer is valid only as long as this filter is valid.
     /// The returned pointer will be cast as *void since there is no common
@@ -505,7 +509,7 @@ impl PcapIfT {
     /// get a list of capture devices
     ///
     /// Constructs a list of network devices that can be opened with
-    /// `Pcap::new()` and `Pcap::builder()`. Note that there may be network
+    /// [Pcap::new()] and [Pcap::builder()]. Note that there may be network
     /// devices that cannot be opened by the process calling, because, for
     /// example, that process does not have sufficient privileges to open them
     /// for capturing; if so, those devices will not appear on the list.
@@ -564,8 +568,8 @@ impl Drop for PcapIfT {
     }
 }
 
-/// A network device that can be opened with `Pcap::new()` and
-/// `Pcap::builder()`.
+/// A network device that can be opened with [Pcap::new()] and
+/// [Pcap::builder()].
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Interface {
     /// Devices name
