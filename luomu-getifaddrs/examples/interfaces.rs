@@ -1,13 +1,8 @@
-#![allow(missing_docs)]
+//! List all interfaces and their information
 
 fn main() -> std::io::Result<()> {
-    use luomu_getifaddrs::getifaddrs;
-
-    let ifaddrs = getifaddrs()?;
-
-    for ifaddr in ifaddrs {
-        println!("{:#?}", ifaddr.ifaddress())
-    }
-
+    luomu_getifaddrs::getifaddrs()?
+        .into_iter()
+        .for_each(|ifaddr| println!("{:#?}", ifaddr.ifaddress()));
     Ok(())
 }

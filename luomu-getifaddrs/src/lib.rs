@@ -1,12 +1,15 @@
 //! This module provides access for addresses, both IP and MAC, assigned
 //! for network interfaces as well as statistics for a interface.
 #![cfg(unix)]
-#![allow(unsafe_code, missing_docs)]
+#![allow(unsafe_code)]
 
 use std::ffi::CStr;
 use std::io;
 use std::mem::MaybeUninit;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+
+use luomu_common::{Address, MacAddr};
+
 #[cfg(target_os = "macos")]
 use std::slice;
 
@@ -14,7 +17,6 @@ mod flags;
 pub use flags::Flags;
 
 mod stats;
-use luomu_common::{Address, MacAddr};
 pub use stats::IfStats;
 
 /// Length of MAC address in bytes
@@ -70,8 +72,7 @@ impl IfAddrs {
     /// Returned [Iterator] yields no values if interface with given name
     /// does not exist.
     pub fn ip_addresses(self, interface: &str) -> impl Iterator<Item = IpAddr> + '_ {
-        self.into_iter()
-            .filter(move |ifa| ifa.name() == interface)
+        self.iter_interface(interface)
             .filter_map(|ifa| ifa.addr().and_then(|a| a.as_ip()))
     }
 
@@ -81,8 +82,7 @@ impl IfAddrs {
     pub fn mac_address(self, interface: &str) -> Option<MacAddr> {
         // there should be only one MAC address for interface thus it is
         // ok to return the first mac address we get for given interface
-        self.into_iter()
-            .filter(|ifa| ifa.name() == interface)
+        self.iter_interface(interface)
             .find_map(|ifa| ifa.addr().and_then(|a| a.as_mac()))
     }
 
@@ -90,9 +90,11 @@ impl IfAddrs {
     ///
     /// Returns [None] if no interface with given name does not exist
     pub fn if_stats(self, interface: &str) -> Option<stats::LinkStats> {
-        self.into_iter()
-            .filter(move |ifa| ifa.name() == interface)
-            .find_map(|ifa| ifa.data())
+        self.iter_interface(interface).find_map(|ifa| ifa.data())
+    }
+
+    fn iter_interface(self, interface: &str) -> impl Iterator<Item = IfAddr> {
+        self.into_iter().filter(move |ifa| ifa.name() == interface)
     }
 }
 
@@ -192,38 +194,32 @@ impl IfAddr {
             if #[cfg(target_os = "macos")] {
                 IfAddr::read_addr(self.ifa().ifa_dstaddr).and_then(|a| a.as_ip())
             } else if #[cfg(target_os = "linux")] {
-                IfAddr::read_addr(self.ifa().ifa_ifu).and_then(|a|a.as_ip())
+                IfAddr::read_addr(self.ifa().ifa_ifu).and_then(|a| a.as_ip())
             }
         }
     }
 
     /// Returns link statistics data, if available.
     pub fn data(&self) -> Option<stats::LinkStats> {
-        if self.ifa().ifa_addr.is_null() {
-            return None;
-        }
-
-        if self.ifa().ifa_data.is_null() {
+        if self.ifa().ifa_addr.is_null() || self.ifa().ifa_data.is_null() {
             return None;
         }
 
         let family = sa_get_family(self.ifa().ifa_addr);
 
         #[cfg(target_os = "linux")]
-        if family == libc::AF_PACKET {
-            let ifa_data = self.ifa().ifa_data;
-            let link_stats = unsafe { &*(ifa_data as *const stats::LinkStats) }.clone();
-            return Some(link_stats);
+        if family != libc::AF_PACKET {
+            return None;
         }
 
         #[cfg(target_os = "macos")]
-        if family == libc::AF_LINK {
-            let ifa_data = self.ifa().ifa_data;
-            let link_stats = *(unsafe { &*(ifa_data as *const stats::LinkStats) });
-            return Some(link_stats);
+        if family != libc::AF_LINK {
+            return None;
         }
 
-        None
+        let ifa_data = self.ifa().ifa_data;
+        let link_stats = unsafe { &*(ifa_data as *const stats::LinkStats) };
+        Some(*link_stats)
     }
 
     /// Reads address information from given socket address pointer.
