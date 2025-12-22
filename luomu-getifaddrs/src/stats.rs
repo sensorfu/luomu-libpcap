@@ -6,7 +6,7 @@ pub use libc::if_data as LinkStats;
 
 /// Source: <https://www.kernel.org/doc/html/latest/networking/statistics.html#c.rtnl_link_stats64>
 #[cfg(target_os = "linux")]
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone, Copy, Hash)]
 pub struct RtnlLinkStats {
     pub rx_packets: u32,
     pub tx_packets: u32,
@@ -34,6 +34,8 @@ pub struct RtnlLinkStats {
     pub rx_nohandler: u32,
 }
 
+/// Trait for accessing most common network interface statistics that are
+/// available between operating systems.
 pub trait IfStats {
     /// Received packets for interface
     fn rx_packets(&self) -> usize;
