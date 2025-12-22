@@ -8,37 +8,37 @@ pub enum Error {
     /// Loop terminated by pcap_breakloop (PCAP_ERROR_BREAK).
     Break,
     /// The capture needs to be activated (PCAP_ERROR_NOT_ACTIVATED).
-    NotActivated(String),
+    NotActivated(Box<str>),
     /// Capture handle already activated (PCAP_ERROR_ACTIVATED).
-    AlreadyActivated(String),
+    AlreadyActivated(Box<str>),
     /// The capture source specified when the handle was created doesn't exist
     /// (PCAP_ERROR_NO_SUCH_DEVICE).
-    NoSuchDevice(String),
+    NoSuchDevice(Box<str>),
     /// Monitor mode was specified but the capture source doesn't support
     /// monitor mode (PCAP_ERROR_RFMON_NOTSUP).
-    MonitorModeNotSupported(String),
+    MonitorModeNotSupported(Box<str>),
     /// The operation is supported only in monitor mode (PCAP_ERROR_NOT_RFMON).
     OnlySupportedInMonitorMode,
     /// The process doesn't have permission to open the capture source
     /// (PCAP_ERROR_PERM_DENIED).
-    PermissionDenied(String),
+    PermissionDenied(Box<str>),
     /// The capture source device is not up (PCAP_ERROR_IFACE_NOT_UP).
-    InterfaceNotUp(String),
+    InterfaceNotUp(Box<str>),
     /// This device doesn't support setting the time stamp type
     /// (PCAP_ERROR_CANTSET_TSTAMP_TYPE).
-    TimestampTypeNotSupported(String),
+    TimestampTypeNotSupported(Box<str>),
     /// The process has permission to open the capture source but doesn't have
     /// permission to put it into promiscuous mode
     /// (PCAP_ERROR_PROMISC_PERM_DENIED).
-    PromiscuousPermissionDenied(String),
+    PromiscuousPermissionDenied(Box<str>),
     /// The requested time stamp precision is not supported
     /// (PCAP_ERROR_TSTAMP_PRECISION_NOTSUP).
     TimestampPrecisionNotSupported,
 
     /// Error from `libpcap`
-    PcapError(String),
+    PcapError(Box<str>),
     /// Warning from `libpcap`
-    PcapWarning(String),
+    PcapWarning(Box<str>),
     /// Unknown error code from `libpcap`.
     PcapErrorCode(i32),
 

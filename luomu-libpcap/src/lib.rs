@@ -46,12 +46,12 @@ unsafe impl Send for PcapT {}
 impl PcapT {
     /// get interface name
     ///
-    /// `get_interface` returns the interface name if known or "<unknown>".
-    pub fn get_inteface(&self) -> String {
+    /// `get_interface` returns the interface name if known or "\<unknown\>".
+    pub fn get_inteface(&self) -> Box<str> {
         if let Some(name) = &self.interface {
-            name.to_string()
+            name.clone()
         } else {
-            String::from("<unknown>")
+            "<unknown>".into()
         }
     }
 
@@ -203,9 +203,9 @@ impl Errbuf {
         Ok(cstr.to_str()?)
     }
 
-    /// Return libpcap's error message as String.
-    fn as_string(&self) -> Result<String> {
-        Ok(self.as_str()?.to_string())
+    /// Return libpcap's error message as string.
+    fn as_string(&self) -> Result<Box<str>> {
+        Ok(self.as_str()?.into())
     }
 
     /// Return libcap's error as [Error] type.
@@ -523,11 +523,11 @@ impl PcapIfT {
     }
 
     /// Find capture device which have IP address `ip`.
-    pub fn find_interface_with_ip(&self, ip: &IpAddr) -> Option<String> {
+    pub fn find_interface_with_ip(&self, ip: &IpAddr) -> Option<Box<str>> {
         for interface in self.get_interfaces() {
             if interface.has_address(ip) {
                 tracing::trace!("find_interface_with_ip({ip}) = {interface:?}");
-                return Some(interface.name.into_string());
+                return Some(interface.name.clone());
             }
         }
         None
