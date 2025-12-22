@@ -219,7 +219,7 @@ pub fn pcap_activate(pcap_t: &PcapT) -> Result<()> {
     // positive value on success with warnings, and a negative value on error. A
     // non-zero return value indicates what warning or error condition occurred.
     if ret > 0 {
-        return Err(Error::PcapWarning(status_to_str(ret)?));
+        return Err(Error::PcapWarning(status_to_str(ret)?.into()));
     }
 
     Ok(())
@@ -238,7 +238,7 @@ pub fn get_error(pcap_t: &PcapT) -> Result<Error> {
     tracing::trace!("get_error({:p})", pcap_t.pcap_t);
     let ptr = unsafe { libpcap::pcap_geterr(pcap_t.pcap_t) };
     let cstr = unsafe { CStr::from_ptr(ptr) };
-    let err = cstr.to_str()?.to_owned();
+    let err = cstr.to_str()?.into();
     Ok(Error::PcapError(err))
 }
 
@@ -657,22 +657,21 @@ fn get_interface_flags(val: u32) -> BTreeSet<InterfaceFlag> {
     flags
 }
 
-fn status_to_str(error: libc::c_int) -> Result<String> {
+fn status_to_str<'a>(error: libc::c_int) -> Result<&'a str> {
     tracing::trace!("status_to_str({error})");
     let ptr = unsafe { libpcap::pcap_statustostr(error) };
     let cstr = unsafe { CStr::from_ptr(ptr) };
-    let status = cstr.to_str()?.to_owned();
-    Ok(status)
+    Ok(cstr.to_str()?)
 }
 
 /// Check for `libpcap` error.
 fn check_pcap_error(pcap_t: &PcapT, ret: i32) -> Result<()> {
     if tracing::event_enabled!(tracing::Level::TRACE) {
         let status = match ret {
-            0 => "ok".to_string(),
-            n => status_to_str(n).unwrap_or_default(),
+            0 => "ok",
+            n => status_to_str(n)?,
         };
-        tracing::trace!("check_pcap_error({:p}, {ret}) = {status}", pcap_t.pcap_t,);
+        tracing::trace!("check_pcap_error({:p}, {ret}) = {status}", pcap_t.pcap_t);
     }
 
     match ret {
