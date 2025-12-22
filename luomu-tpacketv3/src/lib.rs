@@ -22,6 +22,7 @@ fn ifindex_for(ifname: &str) -> libc::c_uint {
 /// fanout modes.
 #[derive(Copy, Clone)]
 pub enum FanoutMode {
+    None,
     HASH(u16),
     LB(u16),
     ROLLOVER(u16),
@@ -44,6 +45,10 @@ impl FanoutMode {
             FanoutMode::CBPF(_) => libc::PACKET_FANOUT_CBPF,
             FanoutMode::EBPF(_) => libc::PACKET_FANOUT_EBPF,
             FanoutMode::CPU(_) => libc::PACKET_FANOUT_CPU,
+            FanoutMode::None => {
+                debug_assert!(false, "should not call val() for None fanout mode");
+                0
+            }
         }
     }
 
@@ -57,6 +62,10 @@ impl FanoutMode {
             | FanoutMode::CBPF(v)
             | FanoutMode::EBPF(v)
             | FanoutMode::CPU(v) => v,
+            FanoutMode::None => {
+                debug_assert!(false, "should not call arg() for None fanout mode");
+                0
+            }
         };
 
         u32::from(group_id) | (self.val() << 16)
@@ -114,7 +123,7 @@ pub struct ReaderParameters {
     /// Maximum size for single packet.
     frame_size: u32,
     /// Fanout mode to set, None for no fanout mode.
-    fanout: Option<FanoutMode>,
+    fanout: FanoutMode,
     /// True to set interface to promiscuous mode
     promisc: bool,
     /// Block timeout the kernel uses for retiring blocks.
@@ -127,7 +136,7 @@ impl Default for ReaderParameters {
             block_count: 32,
             block_size: 1024 * 1024 * 2, // 2MB blocks
             frame_size: 2048,
-            fanout: None,
+            fanout: FanoutMode::None,
             promisc: true,
             block_timeout: Duration::from_millis(100),
         }
@@ -189,7 +198,7 @@ impl ParameterBuilder {
 
     /// Sets fanout mode, [None] for no fanout mode.
     #[must_use]
-    pub fn with_fanout_mode(mut self, fanout: Option<FanoutMode>) -> Self {
+    pub fn with_fanout_mode(mut self, fanout: FanoutMode) -> Self {
         self.0.fanout = fanout;
         self
     }
@@ -322,10 +331,10 @@ pub fn reader<'a>(
     sock.bind(&ll)
         .map_err(|e| format!("Can not bind socket to interface: {e}"))?;
 
-    if let Some(mode) = parameters.fanout {
-        tracing::trace!("Setting fanout mode {:0X}", mode.arg());
+    if !matches!(parameters.fanout, FanoutMode::None) {
+        tracing::trace!("Setting fanout mode {:0X}", parameters.fanout.arg());
         sock.setopt(&socket::Option::PacketFanout(socket::OptValue {
-            val: mode.arg(),
+            val: parameters.fanout.arg(),
         }))
         .map_err(|e| format!("Could not set fanout mode: {e}"))?;
     }
