@@ -160,12 +160,18 @@ mod tests {
     };
     const PKTHDR: pcap_pkthdr = pcap_pkthdr {
         ts: TS,
+        #[allow(clippy::cast_possible_truncation)]
         caplen: LEN as u32,
+        #[allow(clippy::cast_possible_truncation)]
         len: LEN as u32,
     };
 
     fn timestamp() -> SystemTime {
-        SystemTime::UNIX_EPOCH + Duration::new(TS.tv_sec as u64, 1000 * TS.tv_usec as u32)
+        SystemTime::UNIX_EPOCH
+            + Duration::new(
+                TS.tv_sec as u64,
+                1000 * u32::try_from(TS.tv_usec).expect("usec value too large"),
+            )
     }
 
     fn borrowed_packet() -> BorrowedPacket {

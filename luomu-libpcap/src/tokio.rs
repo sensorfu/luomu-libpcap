@@ -48,10 +48,11 @@ impl Stream for AsyncCapture {
     }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn capture_loop(pcap: crate::Pcap, tx: UnboundedSender<crate::Result<OwnedPacket>>) {
     loop {
         match next_packet(&pcap) {
-            Poll::Pending => continue,
+            Poll::Pending => (),
             Poll::Ready(ret) => {
                 let is_err = ret.is_err();
                 if tx.send(ret).is_err() {

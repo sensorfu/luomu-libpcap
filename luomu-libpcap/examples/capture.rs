@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
-
 use luomu_libpcap::{Packet, Pcap, Result};
+use std::fmt::Write;
 
 fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
@@ -26,20 +26,21 @@ fn main() -> Result<()> {
                 if i % 32 == 0 {
                     hex.push('\n');
                 }
-                hex.push_str(&format!("{:02x}", packet[i]));
+                let _ = write!(hex, "{:02x}", packet[i]);
             }
             count += 1;
-            println!("{}", hex);
+            println!("{hex}");
             hex.clear();
-            if count % 100 == 0 && count != 0 {
-                if let Ok(stats) = pcap.stats() {
-                    println!(
-                        "\nStats: received: {} packets, dropped: {} packets, dropped on interface {} packets",
-                        stats.packets_received(),
-                        stats.packets_dropped(),
-                        stats.packets_dropped_interface()
-                    );
-                }
+            if count % 100 == 0
+                && count != 0
+                && let Ok(stats) = pcap.stats()
+            {
+                println!(
+                    "\nStats: received: {} packets, dropped: {} packets, dropped on interface {} packets",
+                    stats.packets_received(),
+                    stats.packets_dropped(),
+                    stats.packets_dropped_interface()
+                );
             }
         }
     }

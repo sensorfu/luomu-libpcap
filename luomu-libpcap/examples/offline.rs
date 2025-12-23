@@ -1,18 +1,16 @@
 #![allow(missing_docs)]
 
 use std::env;
+use std::fmt::Write;
 
 use luomu_libpcap::{Packet, Pcap};
 
 fn main() {
     tracing_subscriber::fmt::init();
 
-    let fname = match env::args().nth(1) {
-        None => {
-            tracing::error!("No PCAP file name given");
-            return;
-        }
-        Some(n) => n,
+    let Some(fname) = env::args().nth(1) else {
+        tracing::error!("No PCAP file name given");
+        return;
     };
 
     let pcap = Pcap::offline(&fname).unwrap();
@@ -26,7 +24,7 @@ fn main() {
             if i % 32 == 0 {
                 hex.push('\n');
             }
-            hex.push_str(&format!("{:02x}", packet[i]));
+            let _ = write!(hex, "{:02x}", packet[i]);
         }
         println!("Packet {} ({} bytes): {}", count + 1, packet.len(), hex);
     }

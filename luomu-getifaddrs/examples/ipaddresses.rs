@@ -17,7 +17,7 @@ fn main() -> std::io::Result<()> {
             .collect::<Box<[String]>>()
             .join(", ");
 
-        println!("{name}: {addrs_text}")
+        println!("{name}: {addrs_text}");
     }
 
     Ok(())

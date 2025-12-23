@@ -204,12 +204,12 @@ mod tests {
 
     // 0.0.0.0/32 "This host on this network" [RFC1122], Section 3.2.1.3
     // 0.0.0.0/8 "This network" [RFC791], Section 3.2
-    const V4_THIS_NETWORK: &[Ipv4Addr] = &[Ipv4Addr::new(0, 0, 0, 0), Ipv4Addr::new(0, 255, 255, 255)];
+    const V4_THIS_NETWORK: &[Ipv4Addr] = &[Ipv4Addr::UNSPECIFIED, Ipv4Addr::new(0, 255, 255, 255)];
 
     // 127.0.0.0/8 Loopback [RFC1122] Section 3.2.1.3
     const V4_LOOPBACKS: &[Ipv4Addr] = &[
         Ipv4Addr::new(127, 0, 0, 0),
-        Ipv4Addr::new(127, 0, 0, 1),
+        Ipv4Addr::LOCALHOST,
         Ipv4Addr::new(127, 255, 255, 255),
     ];
 
@@ -240,7 +240,7 @@ mod tests {
         Ipv4Addr::new(240, 0, 0, 0),
         Ipv4Addr::new(254, 255, 255, 255),
         Ipv4Addr::new(255, 0, 0, 0),
-        Ipv4Addr::new(255, 255, 255, 255),
+        Ipv4Addr::BROADCAST,
     ];
 
     // ::ffff:0:0/96 IPv4-mapped Address [RFC4291]
@@ -270,7 +270,7 @@ mod tests {
             .chain(V4_IETF_PROTOCOL_ASSIGNMENTS)
             .chain(V4_DOCUMENTATION)
             .chain(V4_RESERVED)
-            .cloned()
+            .copied()
     }
 
     fn yield_invalid_destination_ip4() -> impl Iterator<Item = Ipv4Addr> {
@@ -281,7 +281,7 @@ mod tests {
             .chain(V4_DOCUMENTATION)
             .chain(V4_RESERVED)
             .filter(|ip| **ip != Ipv4Addr::BROADCAST)
-            .cloned()
+            .copied()
     }
 
     fn yield_invalid_forwardable_ip4() -> impl Iterator<Item = Ipv4Addr> {
@@ -293,25 +293,25 @@ mod tests {
 
         // If the value of "Destination" is FALSE, the values of "Forwardable"
         // and "Globally Reachable" must also be false.
-        yield_invalid_destination_ip4().chain(OTHERS.iter().cloned())
+        yield_invalid_destination_ip4().chain(OTHERS.iter().copied())
     }
 
     fn yield_invalid_source_ip6() -> impl Iterator<Item = Ipv6Addr> {
         const OTHERS: &[Ipv6Addr] = &[Ipv6Addr::LOCALHOST];
 
-        V6_V4_MAPPED.iter().chain(V6_DOCUMENTATION).chain(OTHERS).cloned()
+        V6_V4_MAPPED.iter().chain(V6_DOCUMENTATION).chain(OTHERS).copied()
     }
 
     fn yield_invalid_destination_ip6() -> impl Iterator<Item = Ipv6Addr> {
         const OTHERS: &[Ipv6Addr] = &[Ipv6Addr::UNSPECIFIED, Ipv6Addr::LOCALHOST];
 
-        V6_V4_MAPPED.iter().chain(V6_DOCUMENTATION).chain(OTHERS).cloned()
+        V6_V4_MAPPED.iter().chain(V6_DOCUMENTATION).chain(OTHERS).copied()
     }
 
     fn yield_invalid_forwardable_ip6() -> impl Iterator<Item = Ipv6Addr> {
         // If the value of "Destination" is FALSE, the values of "Forwardable"
         // and "Globally Reachable" must also be false.
-        yield_invalid_destination_ip6().chain(V6_LINK_LOCAL_UNICAST.iter().cloned())
+        yield_invalid_destination_ip6().chain(V6_LINK_LOCAL_UNICAST.iter().copied())
     }
 
     fn yield_valid_ip4() -> impl Iterator<Item = Ipv4Addr> {
