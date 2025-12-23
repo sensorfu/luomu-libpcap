@@ -36,7 +36,7 @@ async fn capture(interface: &'static str) -> Result<()> {
 async fn ticker() {
     let mut counter = 0;
     loop {
-        println!("tick {}", counter);
+        println!("tick {counter}");
         counter += 1;
         tokio::time::sleep(Duration::from_secs(1)).await;
     }

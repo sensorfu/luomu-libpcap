@@ -446,7 +446,9 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(
+        expected = "IPPair::new() invalid IP address families provided. src: Source(192.0.2.5), dst: Destination(2001:db8:42::12:765)"
+    )]
     fn test_ip_pair_fail() {
         let ip1: IpAddr = "192.0.2.5".parse().unwrap();
         let ip2: IpAddr = "2001:db8:42::12:765".parse().unwrap();

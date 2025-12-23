@@ -209,7 +209,7 @@ mod tests {
         let mac: MacAddr = "11:22:33:AA:BB:CC".parse().unwrap();
         let tagged_mac: TaggedMacAddr = mac.into();
 
-        assert_eq!(tagged_mac.mac().is_unspecified(), false);
+        assert!(!tagged_mac.mac().is_unspecified());
     }
 
     #[test]

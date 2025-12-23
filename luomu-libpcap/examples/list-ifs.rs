@@ -7,7 +7,7 @@ fn main() -> Result<()> {
 
     let pcap_ifs = PcapIfT::new()?;
     for interface in pcap_ifs.get_interfaces() {
-        println!("{:#?}", interface);
+        println!("{interface:#?}");
     }
 
     Ok(())

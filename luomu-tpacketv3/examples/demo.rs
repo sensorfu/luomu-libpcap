@@ -10,19 +10,17 @@ mod linux {
     use std::thread;
     use std::time::Duration;
 
+    #[allow(clippy::needless_pass_by_value)]
     fn packet_consumer(ch: mpsc::Receiver<Vec<u8>>, stop: Arc<AtomicBool>) {
         let mut pkt_count = 0;
         while !stop.load(std::sync::atomic::Ordering::SeqCst) {
             match ch.recv_timeout(std::time::Duration::from_secs(1)) {
-                Err(e) => match e {
-                    mpsc::RecvTimeoutError::Timeout => {
-                        continue;
-                    }
-                    _ => {
+                Err(e) => {
+                    if e != mpsc::RecvTimeoutError::Timeout {
                         tracing::warn!("Channel closed, stopping");
                         break;
                     }
-                },
+                }
                 Ok(_) => pkt_count += 1,
             }
         }
@@ -35,6 +33,7 @@ mod linux {
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn packet_producer(mut reader: tpacketv3::Reader<'_>, ch: mpsc::Sender<Vec<u8>>, stop: Arc<AtomicBool>) {
         let mut false_wakes: u128 = 0;
         let mut wakes: u128 = 0;
@@ -196,7 +195,7 @@ mod linux {
             let p_ifname = ifname.clone();
             producers.push(
                 thread::Builder::new()
-                    .name(format!("producer-{}-{}", p_ifname, i))
+                    .name(format!("producer-{p_ifname}-{i}"))
                     .spawn(move || worker(p, &p_ifname, tx_chan, flag))
                     .unwrap(),
             );
@@ -215,10 +214,10 @@ mod linux {
 
 #[cfg(target_os = "linux")]
 fn main() {
-    linux::main()
+    linux::main();
 }
 
 #[cfg(not(target_os = "linux"))]
 fn main() {
-    println!("tpacket only available on linux")
+    println!("tpacket only available on linux");
 }

@@ -31,9 +31,8 @@ fn test_compile_pcap_filter() -> Result<()> {
 }
 
 #[test]
-fn test_compile_invalid_pcap_filter() -> Result<()> {
+fn test_compile_invalid_pcap_filter() {
     let filter = "foo";
     let res = PcapFilter::compile(filter);
     assert!(res.is_err());
-    Ok(())
 }

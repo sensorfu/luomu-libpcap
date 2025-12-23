@@ -305,7 +305,7 @@ mod tests {
     #[test]
     fn test_fmt_debug() {
         let mac: MacAddr = [0x00, 0xff, 0x11, 0xee, 0x22, 0xdd].into();
-        let debug = format!("{:?}", mac);
+        let debug = format!("{mac:?}");
         assert_eq!(&debug, "MacAddr(00:ff:11:ee:22:dd)");
     }
 
@@ -319,22 +319,22 @@ mod tests {
 
     #[test]
     fn test_try_from_u64_bounds() {
-        let i0 = 0x0000000000000000;
+        let i0 = 0x0000_0000_0000_0000;
         assert!(MacAddr::try_from(i0).is_ok());
 
-        let i1 = 0x0000FFFFFFFFFFFF;
+        let i1 = 0x0000_FFFF_FFFF_FFFF;
         assert!(MacAddr::try_from(i1).is_ok());
 
-        let i2 = 0x0001000000000000;
+        let i2 = 0x0001_0000_0000_0000;
         assert!(MacAddr::try_from(i2).is_err());
 
-        let i3 = 0xFFFFFFFFFFFFFFFF;
+        let i3 = 0xFFFF_FFFF_FFFF_FFFF;
         assert!(MacAddr::try_from(i3).is_err());
     }
 
     #[test]
     fn test_try_from_u64_byteoder() {
-        let i = 0x0000123456789ABC;
+        let i = 0x0000_1234_5678_9ABC;
         let mac = MacAddr::try_from(i).unwrap();
         let b: [u8; 6] = mac.as_array();
         assert_eq!(&b, &[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC]);
@@ -429,7 +429,7 @@ mod tests {
         addr2.push_tag(1337).unwrap();
         addr3.push_tag(42).unwrap();
 
-        let mut v = vec![addr1, addr2, addr3];
+        let mut v = [addr1, addr2, addr3];
         v.sort();
 
         assert_eq!(v[0], addr3);
