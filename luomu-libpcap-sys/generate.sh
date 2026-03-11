@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-LIBPCAP='libpcap-1.10.5'
+LIBPCAP='libpcap-1.10.6'
 
 ./verify.sh "${LIBPCAP}.tar.xz"
 
