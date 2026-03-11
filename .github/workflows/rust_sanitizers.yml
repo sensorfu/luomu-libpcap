@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - uses: sensorfu/setup-rust-action@v1
+      - uses: sensorfu/setup-rust-action@main
         with:
           toolchain: nightly
           components: rust-src
