@@ -8,7 +8,7 @@ use std::process::Command;
 
 use tar::Archive;
 
-static VERSION: &str = "1.10.5";
+static VERSION: &str = "1.10.6";
 
 fn main() -> io::Result<()> {
     let out_dir = env::var("OUT_DIR").expect("environment variable OUT_DIR");
