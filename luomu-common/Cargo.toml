@@ -15,7 +15,8 @@ repository.workspace = true
 default = []
 
 [dependencies]
-libc = { version = "0.2", optional = true }
+libc = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
 
 [dev-dependencies]
 quickcheck.workspace = true

@@ -3,6 +3,9 @@ use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::str::FromStr;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Deserializer, Serialize, de};
+
 use crate::{InvalidAddress, TagError};
 
 /// The MAC address portion of u64
@@ -286,6 +289,27 @@ impl fmt::Debug for MacAddr {
         } else {
             write!(f, "MacAddr({self})")
         }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for MacAddr {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ::serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for MacAddr {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s: &str = de::Deserialize::deserialize(deserializer)?;
+        Ok(Self(FromStr::from_str(s).map_err(de::Error::custom)?))
     }
 }
 
