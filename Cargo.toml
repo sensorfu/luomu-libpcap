@@ -39,6 +39,7 @@ cc = "1"
 liblzma = { version = "0.4", features = ["static"] }
 tar = {version = "0.4", default-features = false }
 clap = { version = "4", features = [ "derive" ] }
+serde = { version = "1", features = ["derive"] }
 
 [workspace.lints.rust]
 # Lint groups
