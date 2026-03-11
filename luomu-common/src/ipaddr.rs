@@ -1,3 +1,5 @@
+#![allow(clippy::decimal_bitwise_operands)]
+
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 /// Is this valid IP source address?
