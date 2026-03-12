@@ -234,11 +234,35 @@ impl IfAddr {
         let family = sa_get_family(ifa_addr);
 
         match family {
+            #[cfg(target_os = "macos")]
+            libc::AF_INET if unsafe { *ifa_addr }.sa_len < 16 => {
+                let len = unsafe { *ifa_addr }.sa_len;
+                debug_assert!(len >= 5 && len <= 8, "invalid sa_len {len} for AF_INET");
+                let sa_data = unsafe { *ifa_addr }.sa_data;
+                let mut ret = 0;
+                if len >= 5 {
+                    ret += u32::from(sa_data[2] as u8) << 24;
+                }
+                if len >= 6 {
+                    ret += u32::from(sa_data[3] as u8) << 16;
+                }
+                if len >= 7 {
+                    ret += u32::from(sa_data[4] as u8) << 8;
+                }
+                if len == 8 {
+                    ret += u32::from(sa_data[5] as u8);
+                }
+                Some(Address::from(Ipv4Addr::from_bits(ret)))
+            }
             libc::AF_INET => {
+                #[cfg(target_os = "macos")]
+                debug_assert_eq!(unsafe { *ifa_addr }.sa_len, 16, "invalid sa_len for AF_INET");
                 let a: libc::sockaddr_in = sa_as_sockaddr_in(ifa_addr);
                 Some(Address::from(Ipv4Addr::from(u32::from_be(a.sin_addr.s_addr))))
             }
             libc::AF_INET6 => {
+                #[cfg(target_os = "macos")]
+                debug_assert_eq!(unsafe { *ifa_addr }.sa_len, 28, "invalid sa_len for AF_INET6");
                 let a: libc::sockaddr_in6 = sa_as_sockaddr_in6(ifa_addr);
                 Some(Address::from(Ipv6Addr::from(a.sin6_addr.s6_addr)))
             }
