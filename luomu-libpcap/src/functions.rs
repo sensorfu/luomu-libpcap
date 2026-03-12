@@ -568,14 +568,40 @@ fn from_sockaddr(addr: *const libc::sockaddr) -> Option<Address> {
 
     let family = unsafe { (*addr).sa_family };
 
+    #[cfg(target_os = "macos")]
+    let sa_len = unsafe { (*addr).sa_len };
+
     match i32::from(family) {
+        #[cfg(target_os = "macos")]
+        libc::AF_INET if sa_len < 16 => {
+            debug_assert!(sa_len >= 5 && sa_len <= 8, "invalid sa_len {sa_len} for AF_INET");
+            let mut ret = 0;
+            if sa_len >= 5 {
+                ret += u32::from(unsafe { (*addr).sa_data[2] } as u8) << 24;
+            }
+            if sa_len >= 6 {
+                ret += u32::from(unsafe { (*addr).sa_data[3] } as u8) << 16;
+            }
+            if sa_len >= 7 {
+                ret += u32::from(unsafe { (*addr).sa_data[4] } as u8) << 8;
+            }
+            if sa_len == 8 {
+                ret += u32::from(unsafe { (*addr).sa_data[5] } as u8);
+            }
+            Some(Address::from(Ipv4Addr::from_bits(ret)))
+        }
+
         libc::AF_INET => {
+            #[cfg(target_os = "macos")]
+            debug_assert_eq!(sa_len, 16, "invalid sa_len for AF_INET");
             let inet4: *const libc::sockaddr_in = addr.cast::<libc::sockaddr_in>();
             let s_addr: u32 = unsafe { (*inet4).sin_addr.s_addr };
             Some(Ipv4Addr::from(u32::from_be(s_addr)).into())
         }
 
         libc::AF_INET6 => {
+            #[cfg(target_os = "macos")]
+            debug_assert_eq!(sa_len, 28, "invalid sa_len for AF_INET6");
             let inet6: *const libc::sockaddr_in6 = addr.cast::<libc::sockaddr_in6>();
             let s6_addr: [u8; 16] = unsafe { (*inet6).sin6_addr.s6_addr };
             Some(Ipv6Addr::from(s6_addr).into())
@@ -609,23 +635,24 @@ fn from_sockaddr(addr: *const libc::sockaddr) -> Option<Address> {
 pub(crate) fn try_address_from(pcap_addr_t: *mut libpcap::pcap_addr_t) -> Option<InterfaceAddress> {
     tracing::trace!("try_address_from({pcap_addr_t:p})");
     debug_assert!(!pcap_addr_t.is_null(), "null pointer");
+
     let addr = {
-        let addr = unsafe { (*pcap_addr_t).addr.cast_const() };
+        let addr = unsafe { (*pcap_addr_t).addr };
         from_sockaddr(addr)?
     };
 
     let netmask = {
-        let addr = unsafe { (*pcap_addr_t).netmask.cast_const() };
+        let addr = unsafe { (*pcap_addr_t).netmask };
         from_sockaddr(addr)
     };
 
     let broadaddr = {
-        let addr = unsafe { (*pcap_addr_t).broadaddr.cast_const() };
+        let addr = unsafe { (*pcap_addr_t).broadaddr };
         from_sockaddr(addr)
     };
 
     let dstaddr = {
-        let addr = unsafe { (*pcap_addr_t).dstaddr.cast_const() };
+        let addr = unsafe { (*pcap_addr_t).dstaddr };
         from_sockaddr(addr)
     };
 
