@@ -17,16 +17,16 @@
 use std::collections::BTreeSet;
 use std::ffi::{CStr, CString, c_void};
 use std::mem::MaybeUninit;
-use std::net::{Ipv4Addr, Ipv6Addr};
 use std::os::fd::AsRawFd;
 use std::path::Path;
 use std::time::Duration;
 
 use crate::{
-    Address, AddressIter, BorrowedPacket, Errbuf, Error, Interface, InterfaceAddress, InterfaceFlag, MacAddr,
-    PcapDumper, PcapFilter, PcapIfT, PcapStat, PcapT, Result,
+    AddressIter, BorrowedPacket, Errbuf, Error, Interface, InterfaceAddress, InterfaceFlag, PcapDumper,
+    PcapFilter, PcapIfT, PcapStat, PcapT, Result,
 };
 
+use luomu_common::sockaddr::from_sockaddr;
 use luomu_libpcap_sys as libpcap;
 
 // libpcap doesn't have constant for success, but man pages state 0 is success.
@@ -557,79 +557,6 @@ pub(crate) fn try_interface_from(pcap_if_t: *mut libpcap::pcap_if_t) -> Result<I
         addresses,
         flags,
     })
-}
-
-fn from_sockaddr(addr: *const libc::sockaddr) -> Option<Address> {
-    tracing::trace!("from_sockaddr({addr:p})");
-
-    if addr.is_null() {
-        return None;
-    }
-
-    let family = unsafe { (*addr).sa_family };
-
-    #[cfg(target_os = "macos")]
-    let sa_len = unsafe { (*addr).sa_len };
-
-    match i32::from(family) {
-        #[cfg(target_os = "macos")]
-        libc::AF_INET if sa_len < 16 => {
-            debug_assert!(sa_len >= 5 && sa_len <= 8, "invalid sa_len {sa_len} for AF_INET");
-            let mut ret = 0;
-            if sa_len >= 5 {
-                ret += u32::from(unsafe { (*addr).sa_data[2] } as u8) << 24;
-            }
-            if sa_len >= 6 {
-                ret += u32::from(unsafe { (*addr).sa_data[3] } as u8) << 16;
-            }
-            if sa_len >= 7 {
-                ret += u32::from(unsafe { (*addr).sa_data[4] } as u8) << 8;
-            }
-            if sa_len == 8 {
-                ret += u32::from(unsafe { (*addr).sa_data[5] } as u8);
-            }
-            Some(Address::from(Ipv4Addr::from_bits(ret)))
-        }
-
-        libc::AF_INET => {
-            #[cfg(target_os = "macos")]
-            debug_assert_eq!(sa_len, 16, "invalid sa_len for AF_INET");
-            let inet4: *const libc::sockaddr_in = addr.cast::<libc::sockaddr_in>();
-            let s_addr: u32 = unsafe { (*inet4).sin_addr.s_addr };
-            Some(Ipv4Addr::from(u32::from_be(s_addr)).into())
-        }
-
-        libc::AF_INET6 => {
-            #[cfg(target_os = "macos")]
-            debug_assert_eq!(sa_len, 28, "invalid sa_len for AF_INET6");
-            let inet6: *const libc::sockaddr_in6 = addr.cast::<libc::sockaddr_in6>();
-            let s6_addr: [u8; 16] = unsafe { (*inet6).sin6_addr.s6_addr };
-            Some(Ipv6Addr::from(s6_addr).into())
-        }
-
-        #[cfg(target_os = "macos")]
-        libc::AF_LINK => {
-            let dl_sock: *const libc::sockaddr_dl = addr.cast::<libc::sockaddr_dl>();
-            let start = unsafe { (*dl_sock).sdl_nlen } as usize;
-            let dl_addr: [i8; 6] =
-                TryFrom::try_from(unsafe { (*dl_sock).sdl_data.get(start..=start + 5)? }).ok()?;
-            let dl_addr: [u8; 6] = unsafe { std::mem::transmute(dl_addr) };
-            Some(MacAddr::from(dl_addr).into())
-        }
-
-        #[cfg(target_os = "linux")]
-        libc::AF_PACKET => {
-            let ll_sock: *const libc::sockaddr_ll = addr.cast::<libc::sockaddr_ll>();
-            let mut ll_addr = [0u8; 6];
-            ll_addr.copy_from_slice(unsafe { &(&(*ll_sock).sll_addr)[0..6] });
-            Some(MacAddr::from(ll_addr).into())
-        }
-
-        n => {
-            tracing::error!("Unsupported sa_family {n}");
-            None
-        }
-    }
 }
 
 pub(crate) fn try_address_from(pcap_addr_t: *mut libpcap::pcap_addr_t) -> Option<InterfaceAddress> {

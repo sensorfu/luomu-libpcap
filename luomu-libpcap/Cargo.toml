@@ -18,7 +18,7 @@ async-tokio = [ "dep:futures-core", "dep:tokio" ]
 
 [dependencies]
 libc.workspace = true
-luomu-common.workspace = true
+luomu-common = { workspace = true, features = [ "libc" ] }
 luomu-libpcap-sys.workspace = true
 tracing.workspace = true
 

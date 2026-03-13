@@ -15,7 +15,7 @@ repository.workspace = true
 bitflags.workspace = true
 cfg-if.workspace = true
 libc.workspace = true
-luomu-common.workspace = true
+luomu-common = { workspace = true, features = [ "libc" ] }
 
 [lints]
 workspace = true
