@@ -5,21 +5,16 @@
 use std::ffi::CStr;
 use std::io;
 use std::mem::MaybeUninit;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::net::IpAddr;
 
+use luomu_common::sockaddr::from_sockaddr;
 use luomu_common::{Address, MacAddr};
-
-#[cfg(target_os = "macos")]
-use std::slice;
 
 mod flags;
 pub use flags::Flags;
 
 mod stats;
 pub use stats::IfStats;
-
-/// Length of MAC address in bytes
-const MAC_ADDR_LEN: usize = 6;
 
 /// Returns a linked list describing the network interfaces of
 /// the local system.
@@ -117,27 +112,6 @@ impl Iterator for IfAddrs {
     }
 }
 
-/// Returns address family value from [libc::sockaddr]
-const fn sa_get_family(sa: *const libc::sockaddr) -> i32 {
-    unsafe { *sa }.sa_family as libc::c_int
-}
-
-/// Returns given [libc::sockaddr] pointer as a pointer to [libc::sockaddr_in]
-const fn sa_as_sockaddr_in(sa: *const libc::sockaddr) -> libc::sockaddr_in {
-    unsafe { *(sa.cast::<libc::sockaddr_in>()) }
-}
-
-/// Returns given [libc::sockaddr] pointer as a pointer to [libc::sockaddr_in6]
-const fn sa_as_sockaddr_in6(sa: *const libc::sockaddr) -> libc::sockaddr_in6 {
-    unsafe { *(sa.cast::<libc::sockaddr_in6>()) }
-}
-
-#[cfg(target_os = "macos")]
-/// Returns given [libc::sockaddr] pointer as a pointer to [libc::sockaddr_dl]
-const fn sa_as_sockaddr_dl(sa: *const libc::sockaddr) -> libc::sockaddr_dl {
-    unsafe { *(sa.cast::<libc::sockaddr_dl>()) }
-}
-
 /// This struct provides access to information about network interface.
 pub struct IfAddr {
     /// pointer for the interface data
@@ -179,21 +153,21 @@ impl IfAddr {
 
     /// Interface address
     pub fn addr(&self) -> Option<Address> {
-        IfAddr::read_addr(self.ifa().ifa_addr)
+        from_sockaddr(self.ifa().ifa_addr)
     }
 
     /// Interface netmask
     pub fn netmask(&self) -> Option<IpAddr> {
-        IfAddr::read_addr(self.ifa().ifa_netmask).and_then(|a| a.as_ip())
+        from_sockaddr(self.ifa().ifa_netmask).and_then(|a| a.as_ip())
     }
 
     /// Destination address for Point-to-Point link
     pub fn dstaddr(&self) -> Option<IpAddr> {
         cfg_if::cfg_if! {
             if #[cfg(target_os = "macos")] {
-                IfAddr::read_addr(self.ifa().ifa_dstaddr).and_then(|a| a.as_ip())
+                from_sockaddr(self.ifa().ifa_dstaddr).and_then(|a| a.as_ip())
             } else if #[cfg(target_os = "linux")] {
-                IfAddr::read_addr(self.ifa().ifa_ifu).and_then(|a| a.as_ip())
+                from_sockaddr(self.ifa().ifa_ifu).and_then(|a| a.as_ip())
             }
         }
     }
@@ -204,7 +178,7 @@ impl IfAddr {
             return None;
         }
 
-        let family = sa_get_family(self.ifa().ifa_addr);
+        let family = i32::from(unsafe { *self.ifa().ifa_addr }.sa_family);
 
         #[cfg(target_os = "linux")]
         if family != libc::AF_PACKET {
@@ -219,96 +193,6 @@ impl IfAddr {
         let ifa_data = self.ifa().ifa_data;
         let link_stats = unsafe { &*(ifa_data as *const stats::LinkStats) };
         Some(*link_stats)
-    }
-
-    /// Reads address information from given socket address pointer.
-    ///
-    /// Address may contain IP address or Link address, the returned
-    /// [Addr] reflects which one was read. [None] is returned if no address
-    /// was available, or it could not be read.
-    fn read_addr(ifa_addr: *const libc::sockaddr) -> Option<Address> {
-        if ifa_addr.is_null() {
-            return None;
-        }
-
-        let family = sa_get_family(ifa_addr);
-
-        match family {
-            #[cfg(target_os = "macos")]
-            libc::AF_INET if unsafe { *ifa_addr }.sa_len < 16 => {
-                let len = unsafe { *ifa_addr }.sa_len;
-                debug_assert!(len >= 5 && len <= 8, "invalid sa_len {len} for AF_INET");
-                let sa_data = unsafe { *ifa_addr }.sa_data;
-                let mut ret = 0;
-                if len >= 5 {
-                    ret += u32::from(sa_data[2] as u8) << 24;
-                }
-                if len >= 6 {
-                    ret += u32::from(sa_data[3] as u8) << 16;
-                }
-                if len >= 7 {
-                    ret += u32::from(sa_data[4] as u8) << 8;
-                }
-                if len == 8 {
-                    ret += u32::from(sa_data[5] as u8);
-                }
-                Some(Address::from(Ipv4Addr::from_bits(ret)))
-            }
-            libc::AF_INET => {
-                #[cfg(target_os = "macos")]
-                debug_assert_eq!(unsafe { *ifa_addr }.sa_len, 16, "invalid sa_len for AF_INET");
-                let a: libc::sockaddr_in = sa_as_sockaddr_in(ifa_addr);
-                Some(Address::from(Ipv4Addr::from(u32::from_be(a.sin_addr.s_addr))))
-            }
-            libc::AF_INET6 => {
-                #[cfg(target_os = "macos")]
-                debug_assert_eq!(unsafe { *ifa_addr }.sa_len, 28, "invalid sa_len for AF_INET6");
-                let a: libc::sockaddr_in6 = sa_as_sockaddr_in6(ifa_addr);
-                Some(Address::from(Ipv6Addr::from(a.sin6_addr.s6_addr)))
-            }
-            #[cfg(target_os = "macos")]
-            libc::AF_LINK => {
-                // MAC address for this interface
-                let a: libc::sockaddr_dl = sa_as_sockaddr_dl(ifa_addr);
-                // length of the address
-                let a_len = usize::from(a.sdl_alen);
-                // length of the name
-                let n_len = usize::from(a.sdl_nlen);
-                // If seems that name is stored to sdl_data before the mac
-                // address of the interface. However, libc::sockaddr_dl::sdl_data has been
-                // defined to contain 12 bytes. Thus, if name of the interface
-                // is longer than 6 bytes (characters), we can not read the MAC
-                // address of that interface.
-                if a_len != MAC_ADDR_LEN || n_len + a_len > a.sdl_data.len() {
-                    return None;
-                }
-                // also, sdl_data has been defined as i8 for whatever reason,
-                // we need bytes for mac address, thus a bit of unsafery
-                let data = &a.sdl_data;
-                let sdl_data_as_u8: &[u8] =
-                    unsafe { slice::from_raw_parts(data.as_ptr().cast::<u8>(), data.len()) };
-                let mut address = [0u8; MAC_ADDR_LEN];
-                // mac address stored after name
-                // You may want to look into LLADDR() macro somewhere on Mac OS headers
-                let offset = usize::from(a.sdl_nlen);
-                address[..MAC_ADDR_LEN].copy_from_slice(&sdl_data_as_u8[offset..offset + MAC_ADDR_LEN]);
-                Some(Address::from(address))
-            }
-            #[cfg(target_os = "linux")]
-            libc::AF_PACKET => {
-                // Mac address of the interface
-                let a: libc::sockaddr_ll = unsafe { *(ifa_addr.cast::<libc::sockaddr_ll>()) };
-                let a_len = usize::from(a.sll_halen);
-                debug_assert!(a_len == MAC_ADDR_LEN);
-                if a_len != MAC_ADDR_LEN {
-                    return None;
-                }
-                let mut address = [0u8; MAC_ADDR_LEN];
-                address[..MAC_ADDR_LEN].copy_from_slice(&a.sll_addr[..MAC_ADDR_LEN]);
-                Some(Address::from(address))
-            }
-            _ => None,
-        }
     }
 }
 

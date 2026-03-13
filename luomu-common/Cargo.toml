@@ -11,6 +11,12 @@ rust-version.workspace = true
 homepage.workspace = true
 repository.workspace = true
 
+[features]
+default = []
+
+[dependencies]
+libc = { version = "0.2", optional = true }
+
 [dev-dependencies]
 quickcheck.workspace = true
 

@@ -21,6 +21,9 @@ pub use tagged_macaddr::TaggedMacAddr;
 /// forwardable
 pub mod ipaddr;
 
+#[cfg(feature = "libc")]
+pub mod sockaddr;
+
 /// Invalid address error
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct InvalidAddress;
