@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: sudo apt -y update && sudo apt -y install flex bison
         if: ${{ startsWith(matrix.os, 'ubuntu') }}
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: sensorfu/setup-rust-action@main
@@ -46,7 +46,7 @@ jobs:
           - x86_64-unknown-linux-musl
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: sensorfu/setup-rust-action@main
