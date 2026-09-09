@@ -514,12 +514,11 @@ pub(crate) fn try_interface_from(pcap_if_t: *mut libpcap::pcap_if_t) -> Result<I
     tracing::trace!("try_interface_from({pcap_if_t:p})");
     let name: Box<str> = {
         let name = unsafe { (*pcap_if_t).name };
-        if name.is_null() {
-            panic!("pcap_if_t.name is null");
-        } else {
-            let s = unsafe { CStr::from_ptr(name) };
-            s.to_str()?.into()
-        }
+
+        assert!(!name.is_null(), "pcap_if_t.name is null");
+
+        let s = unsafe { CStr::from_ptr(name) };
+        s.to_str()?.into()
     };
 
     let description: Option<Box<str>> = {
