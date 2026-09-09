@@ -104,7 +104,7 @@ pub fn from_sockaddr(ifa_addr: *const libc::sockaddr) -> Option<Address> {
             // Mac address of the interface
             let a: libc::sockaddr_ll = unsafe { *(ifa_addr.cast::<libc::sockaddr_ll>()) };
             let a_len = usize::from(a.sll_halen);
-            debug_assert!(a_len == MAC_ADDR_LEN);
+            debug_assert_eq!(a_len, MAC_ADDR_LEN);
             if a_len != MAC_ADDR_LEN {
                 return None;
             }
