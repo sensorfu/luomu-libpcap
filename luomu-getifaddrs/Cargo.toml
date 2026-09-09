@@ -3,7 +3,6 @@ name = "luomu-getifaddrs"
 description = "Safe interface for getifaddrs()"
 version = "0.1.0"
 authors = [ "Ossi Herrala <oherrala@iki.fi>" ]
-readme = "README.md"
 categories = [ "external-ffi-bindings", "network-programming", "os::linux-apis", "os::macos-apis" ]
 license.workspace = true
 edition.workspace = true
